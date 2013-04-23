@@ -24,6 +24,7 @@ class Atom(object):
 	    self.timer = 0 #start
 	    self.timer2 = 0 #last for?
 	    self.type = "base"
+	    self.send_deactivate_message()
 
     def act(self):
     	pass
@@ -31,11 +32,26 @@ class Atom(object):
 	def mutate(self):
 		pass
 
-	def conditional_activate(self):
+	def send_message(self,key,value):
 		"""
-		previous: conditionalActivate
+		Stores data centrally for other atoms
+		to access
 		"""
-		pass
+		self.memory.send_message(self.id,key,value)
+
+	def send_active_message(self):
+		"""
+		Stores data centrally for other atoms
+		to access
+		"""
+		self.send_message("Active",True)
+
+	def send_deactivate_message(self):
+		"""
+		Stores data centrally for other atoms
+		to access
+		"""
+		self.send_message("Active",False)
 
 class SensorAtom(Atom):
 	"""

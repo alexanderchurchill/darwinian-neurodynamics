@@ -27,3 +27,6 @@ memoryManager = memoryManagerClass("memoryManager")
 #Create an instance of a basic motor function module. 
 global bmf
 bmf = BasicMotorFunction("bmf","127.0.0.1")
+
+def exclusive_activate():
+	

@@ -6,7 +6,7 @@ class Atom(object):
 	"""
 	The base class for an atom
 	"""
-	def __init__(self, arg):
+	def __init__(self, id, memory=None,messages=None,message_delays=None,parameters=None):
 		self.id = None #count
 	    self.memory = None #mm
 	    self.messages = None
@@ -41,19 +41,32 @@ class SensorAtom(Atom):
 	"""
 	The base class for a sensor atom
 	"""
-	def __init__(self,sensors,sensory_conditions=None):
-		super(Sensor, self).__init__()
-		self.arg = arg
-    	self.sensors = sensors
-    	self.sensory_conditions = []
+	def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+				 sensors=None,sensory_conditions=None):
+		super(Sensor, self).__init__(id,memory,messages,message_delays,parameters)
+		self.sensors = sensors
+		if self.sensors == None:
+			self.sensors = []
+    	self.sensory_conditions = sensory_conditions
+    	if self.sensory_conditions == None:
+    		sensory_conditions = []
     	self.type = "sensory"
+
+class TransformAtom(Atom):
+	"""
+	The base class for a sensor atom
+	"""
+	def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None):
+		super(TransformAtom, self).__init__(id,memory,messages,message_delays,parameters)
+    	self.type = "transform"
 
 class MotorAtom(Atom):
 	"""
 	The base class for a sensor atom
 	"""
-	def __init__(self):
-		super(Motor, self).__init__()
+	def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+		         motors=None):
+		super(Motor, self).__init__(id,memory,messages,message_delays,parameters)
     	self.motors = motors
     	self.type = "motor"
 

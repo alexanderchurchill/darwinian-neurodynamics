@@ -3,7 +3,7 @@ import math
 import almath
 from time import time, sleep
 
-class BasicMotorFunction(ALModule):
+class NaoMotorFunction(ALModule):
   """
   Create a basic motor function instance
   """
@@ -67,7 +67,7 @@ class BasicMotorFunction(ALModule):
     self.isRunning=False
     ALModule.exit(self)
 
-class memoryManagerClass(ALModule):
+class NaoMemory(ALModule):
   """Create memoryManagerClass instance"""
   
   def __init__(self,name):

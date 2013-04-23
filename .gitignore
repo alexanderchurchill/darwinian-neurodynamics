@@ -1,0 +1,13 @@
+# Compiled source #
+###################
+*.pyc
+*.swp
+
+# data files #
+###################
+*.pkl
+
+# configs #
+###################
+*.sublime-project
+*.sublime-workspace

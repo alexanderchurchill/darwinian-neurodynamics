@@ -27,7 +27,7 @@ nao_mem_global = NaoMemory("memoryManager")
 # where the message list is kept
 memory = Messages()
 # where the list of all atoms are kept
-atoms = []
+atoms = {}
 #Create an instance of a basic motor function module. 
 global bmf_global
 bmf_global = NaoMotorFunction("bmf","127.0.0.1")

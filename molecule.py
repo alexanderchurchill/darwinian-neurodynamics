@@ -29,9 +29,14 @@ class Molecule(object):
             atom = self.atoms[n]
             connections = self.molecular_graph.predecessors(n)
             atom.messages = connections
-
+    def get_atoms_as_list(self):
+        atoms = []
+        for n in self.molecular_graph:
+            atom = self.atoms[n]
+            atoms.append(atom)
+        return atoms
     def __str__(self):
-        return " - ".join(["[id:{0} active:{1}]".format(a.id,a.active) for a in self.atoms])
+        return " - ".join(["[id:{0} active:{1}]".format(self.atoms[a].id,self.atoms[a].active) for a in self.molecular_graph.nodes()])
 
 
 class GameMolecule(Molecule):
@@ -89,7 +94,8 @@ class NAOActorMolecule(ActorMolecule):
         atom_1 = SensorAtom(id=1,memory=self.memory,sensors=[143],messages=[],message_delays=[0])
         atom_2 = TransformAtom(id=2,memory=self.memory,messages=[],message_delays=[1])
         atom_3 = MotorAtom(id=3,memory=self.memory,messages=[],message_delays=[1],motors = [self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor()], parameters = [[random.randint(0,3)], [2*(random.random()-0.5),2*(random.random()-0.5),2*(random.random()-0.5)], [1, 1, 1]])
-        self.atoms += [atom_1,atom_2,atom_3]
+        for a in [atom_1,atom_2,atom_3]:
+            self.atoms[a.get_id()]=a
         self.molecular_graph = nx.DiGraph()
         self.molecular_graph.add_node(atom_1.get_id())
         self.molecular_graph.add_node(atom_2.get_id())

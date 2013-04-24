@@ -34,3 +34,4 @@ bmf_global = NaoMotorFunction("bmf","127.0.0.1")
 
 basic_molecule = NAOActorMolecule(memory,atoms,nao_mem_global)
 print(basic_molecule)
+basic_molecule.activate()

@@ -15,6 +15,7 @@ class Molecule(object):
         self.active_hist = True
         self.memory = memory
         self.type = "base"
+        self.times_tested = 0
 
     def constructor(self):
         pass
@@ -25,6 +26,10 @@ class Molecule(object):
         """
         pass
     def set_connections(self):
+        """
+        takes graph connections between nodes and
+        converts them to atom.messages
+        """
         for n in self.molecular_graph:
             atom = self.atoms[n]
             connections = self.molecular_graph.predecessors(n)
@@ -36,7 +41,11 @@ class Molecule(object):
             atoms.append(atom)
         return atoms
     def __str__(self):
-        return " - ".join(["[id:{0} active:{1}]".format(self.atoms[a].id,self.atoms[a].active) for a in self.molecular_graph.nodes()])
+        # long oneliner!
+        return " - ".join(
+            ["[id:{0} active:{1}]".format(self.atoms[a].id,self.atoms[a].active)
+             for a in self.molecular_graph.nodes()
+            ])
 
 
 class GameMolecule(Molecule):
@@ -55,25 +64,27 @@ class ActorMolecule(Molecule):
         super(ActorMolecule, self).__init__(*args)
         self.type = "actor_molecule"
 
-    def activate():
-        self.active = True
-        self.active_hist = True
-        for a in atoms:
-            if a.type == "sensor":
-                a.active = True
-                a.send_active_message()
+    def activate(self):
+        """
+        activate molecule
+        """
+        self.times_tested += 1
+        for atom in self.get_atoms_as_list():
+            if atom.type == "sensory":
+                atom.activate()
+                # check to see if sensory conditions have been met
+                if atom.active:
+                    self.active = True
+                    self.active_hist = True
 
-    def conditionalActivate(self):
-        if self.messages is not None:
-            for index, i in enumerate(self.messages):
-                if self.mm.getMessageValue(i)[0] is 1 and self.active is False: 
-                    #Incremement timer
-                    self.timer += 1
-                    if self.timer == self.message_delays[index]:
-                        self.active = True
-                        self.activeHist = True
-                        self.send_active_message()#Active signal
+    def conditional_activate(self):
+        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
+            print "looking at:",atom.id
+            atom.conditional_activate()
 
+    def act(self):
+        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
+            atom.act()
 class NAOActorMolecule(ActorMolecule):
     """
     The data structure for an actor molecule
@@ -81,7 +92,6 @@ class NAOActorMolecule(ActorMolecule):
     def __init__(self, memory,atoms,nao_memory):
         super(NAOActorMolecule, self).__init__(memory,atoms)
         self.nao_memory = nao_memory
-        self.memory = memory
         self.constructor()
         self.set_connections()
     def constructor(self):
@@ -91,7 +101,7 @@ class NAOActorMolecule(ActorMolecule):
         # self.totalCount = self.totalCount + 1
         # self.actors[self.totalCount] = actorClass(copyA = False, atomA = None, typeA = "motorP", nameA = "actor",count = self.totalCount, sensors = None, messages = [self.totalCount-1], messageDelays = [2], motors = [self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor()], function = "sequence", parameters = [[random.randint(0,3)], [2*(random.random()-0.5), 2*(random.random()-0.5), 2*(random.random()-0.5)], [1, 1, 1]])
         # self.totalCount = self.totalCount + 1
-        atom_1 = SensorAtom(id=1,memory=self.memory,sensors=[143],messages=[],message_delays=[0])
+        atom_1 = NaoSensorAtom(id=1,memory=self.memory,nao_memory=self.nao_memory,sensors=[143],sensory_conditions=[-2.0],messages=[],message_delays=[0])
         atom_2 = TransformAtom(id=2,memory=self.memory,messages=[],message_delays=[1])
         atom_3 = MotorAtom(id=3,memory=self.memory,messages=[],message_delays=[1],motors = [self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor()], parameters = [[random.randint(0,3)], [2*(random.random()-0.5),2*(random.random()-0.5),2*(random.random()-0.5)], [1, 1, 1]])
         for a in [atom_1,atom_2,atom_3]:

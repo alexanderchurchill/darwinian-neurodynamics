@@ -1,6 +1,7 @@
 """
 Everything related to an atom is in here
 """
+
 import random
 class Atom(object):
     """
@@ -20,7 +21,7 @@ class Atom(object):
         self.timer = 0 #start
         self.timer2 = 0 #last for?
         self.type = "base"
-        # register atom
+        # register atom:
         self.add_atom_to_memory()
         self.send_deactivate_message()
 
@@ -35,27 +36,40 @@ class Atom(object):
         Stores data centrally for other atoms
         to access
         """
-        self.memory.send_message(str(self.id),key,value)
+        self.memory.send_message(self.id,key,value)
 
     def add_atom_to_memory(self):
-        self.memory.add_key_to_memory(str(self.id))
+        self.memory.add_key_to_memory(self.id)
 
     def send_active_message(self):
         """
         Stores data centrally for other atoms
         to access
         """
-        self.send_message("Active",True)
+        self.send_message("active",True)
 
     def send_deactivate_message(self):
         """
         Stores data centrally for other atoms
         to access
         """
-        self.send_message("Active",False)
+        self.send_message("active",False)
 
     def get_id(self):
         return self.id
+
+    def activate(self):
+        self.active = True
+        self.send_active_message()
+
+    def conditional_activate(self):
+        if self.messages is not None:
+            for index, atom_id in enumerate(self.messages):
+                if self.memory.get_message(atom_id,"active") and self.active is False: 
+                    #Incremement timer
+                    self.timer += 1
+                    if self.timer == self.message_delays[index]:
+                        self.activate()
 
 class SensorAtom(Atom):
     """
@@ -70,8 +84,23 @@ class SensorAtom(Atom):
         self.sensory_conditions = sensory_conditions
         if self.sensory_conditions == None:
             sensory_conditions = []
+        self.sensor_input = None
         self.type = "sensory"
 
+    def act(self):
+        self.times_tested = self.times_tested+1
+        self.send_message([sensor for sensor in self.sensors])
+
+    def activate(self):
+        self.get_sensor_input()
+        conditions_met = True
+        for sensor,condition in zip(self.sensor_input,self.sensory_conditions):
+            if sensor < condition:
+                conditions_met = False
+        if conditions_met:
+            Atom.activate(self)
+    def get_sensor_input(self):
+        pass
 class TransformAtom(Atom):
     """
     The base class for a sensor atom
@@ -101,3 +130,18 @@ class GameAtom(Atom):
         self.sensory_conditions = []
         self.type = "game"
 
+
+# NAO Classes
+class NaoSensorAtom(SensorAtom):
+    """
+    The base class for a Nao specific sensor atom
+    """
+    def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+                 sensors=None,sensory_conditions=None,nao_memory=None):
+        super(NaoSensorAtom, self).__init__(self,id,memory=memory,messages=messages,
+                                            message_delays=message_delays,parameters=parameters,
+                                            sensors=sensors,sensory_conditions=sensory_conditions)
+        self.nao_memory = nao_memory
+    def get_sensor_input(self):
+        for s in self.sensors:
+            self.sensor_input = self.nao_memory.getSensorValue(s)

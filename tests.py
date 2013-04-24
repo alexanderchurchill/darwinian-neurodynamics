@@ -24,9 +24,13 @@ from_file = False
 #All use of memory is through use of the memory manager module. 
 global nao_mem_global
 nao_mem_global = NaoMemory("memoryManager")
+# where the message list is kept
 memory = Messages()
+# where the list of all atoms are kept
+atoms = []
 #Create an instance of a basic motor function module. 
 global bmf_global
 bmf_global = NaoMotorFunction("bmf","127.0.0.1")
 
-basic_molecule = NAOActorMolecule(memory,nao_mem_global)
+basic_molecule = NAOActorMolecule(memory,atoms,nao_mem_global)
+print(basic_molecule)

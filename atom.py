@@ -54,6 +54,9 @@ class Atom(object):
         """
         self.send_message("Active",False)
 
+    def get_id(self):
+        return self.id
+
 class SensorAtom(Atom):
     """
     The base class for a sensor atom

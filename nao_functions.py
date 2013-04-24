@@ -2,7 +2,7 @@ from naoqi import *
 import math
 import almath
 from time import time, sleep
-
+import random
 class NaoMotorFunction(ALModule):
   """
   Create a basic motor function instance

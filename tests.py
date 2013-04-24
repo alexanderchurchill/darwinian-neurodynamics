@@ -6,6 +6,7 @@ import pickle
 import pprint
 from nao_functions import *
 from molecule import *
+from memory import Messages
 #PYTHON SCRIPT FOR RUNNING DARWINIAN NEURODYNAMICS
 
 # Create a local broker
@@ -21,11 +22,11 @@ from_file = False
 
 #Create memory manager to store dictionary of sensory and motor states
 #All use of memory is through use of the memory manager module. 
-global nao_mem
-nao_mem = NaoMemory("memoryManager")
-
+global nao_mem_global
+nao_mem_global = NaoMemory("memoryManager")
+memory = Messages()
 #Create an instance of a basic motor function module. 
-global bmf
-bmf = BasicMotorFunction("bmf","127.0.0.1")
+global bmf_global
+bmf_global = NaoMotorFunction("bmf","127.0.0.1")
 
-basic_molecule = NAOActorMolecule(nao_mem)
+basic_molecule = NAOActorMolecule(memory,nao_mem_global)

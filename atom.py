@@ -77,7 +77,7 @@ class SensorAtom(Atom):
     """
     def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
                  sensors=None,sensory_conditions=None):
-        super(SensorAtom, self).__init__(id,memory,messages,message_delays,parameters)
+        super(SensorAtom, self).__init__(id,memory=memory,messages=messages,message_delays=message_delays,parameters=parameters)
         self.sensors = sensors
         if self.sensors == None:
             self.sensors = []
@@ -138,10 +138,11 @@ class NaoSensorAtom(SensorAtom):
     """
     def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
                  sensors=None,sensory_conditions=None,nao_memory=None):
-        super(NaoSensorAtom, self).__init__(self,id,memory=memory,messages=messages,
-                                            message_delays=message_delays,parameters=parameters,
-                                            sensors=sensors,sensory_conditions=sensory_conditions)
+        super(NaoSensorAtom, self).__init__(id,memory=memory,messages=messages,message_delays=message_delays,parameters=parameters,sensors=sensors,sensory_conditions=sensory_conditions)
         self.nao_memory = nao_memory
     def get_sensor_input(self):
+        # print "in NaoSensorAtom"
+        self.sensor_input = []
         for s in self.sensors:
-            self.sensor_input = self.nao_memory.getSensorValue(s)
+            self.sensor_input.append(self.nao_memory.getSensorValue(s))
+            print self.sensor_input

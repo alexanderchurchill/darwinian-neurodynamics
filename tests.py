@@ -27,14 +27,34 @@ nao_mem_global = NaoMemory("memoryManager")
 # where the message list is kept
 memory = Messages()
 # where the list of all atoms are kept
-atoms = {}
+atoms = memory.atoms
 #Create an instance of a basic motor function module. 
 global bmf_global
 bmf_global = NaoMotorFunction("bmf","127.0.0.1")
 bmf_global.rest()
 bm = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
+gm = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global)
+memory.molecules[bm.id] = bm
+memory.molecules[gm.id] = gm
+
 print(bm)
+m = memory.message_list
+print m
 bm.activate()
-bm.act()
-bm.conditional_activate()
-bm.act()
+gm.activate()
+for t in range(0,10):
+	print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
+	bm.act()
+	bm.conditional_activate()
+	gm.act()
+	gm.conditional_activate()
+	print t
+	print m
+	sleep(0.1)
+# print "fitness:",atoms["g3"].get_fitness()
+# print "fitness:",atoms["g3"].state
+population = []
+for i in range(0,10):
+	molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
+	memory.molecules[molecule.id] = molecule
+	population.append(molecule)

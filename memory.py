@@ -11,11 +11,14 @@ def _all_strings(f):
     return wrapped
 
 class Messages(object):
-    """docstring for Messages"""
+    """
+    Central register for messages to be stored
+    """
     def __init__(self):
         super(Messages, self).__init__()
         self.message_list = {}
-
+        self.molecules = {}
+        self.atoms = {}
     @_all_strings
     def add_key_to_memory(self,id):
         self.message_list[id]={}

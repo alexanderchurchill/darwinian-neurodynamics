@@ -3,11 +3,12 @@ Everything related to an atom is in here
 """
 
 import random
+
 class Atom(object):
     """
     The base class for an atom
     """
-    def __init__(self, id, memory=None,messages=None,message_delays=None,parameters=None):
+    def __init__(self, id, memory=None,messages=None,message_delays=None):
         self.id = id #count
         self.memory = memory #mm
         self.messages = messages
@@ -15,11 +16,10 @@ class Atom(object):
         self.active = False
         self.active_hist = False # activeHist ....take this out probably
         self.times_tested = 0 #timesTested
-        self.parameters = parameters
         self.fitness = 0 
         #!!!!! self.set_stiffness(1)
-        self.timer = 0 #start
-        self.timer2 = 0 #last for?
+        self.time_delayed = 0 #start
+        self.time_active = 0 #last for?
         self.type = "base"
         # register atom:
         self.add_atom_to_memory()
@@ -58,6 +58,13 @@ class Atom(object):
     def get_id(self):
         return self.id
 
+    def deactivate(self):
+        self.active = False
+        self.time_delayed = 0
+        self.time_active = 0
+        self.memory.clear_all_from_memory(id)
+        self.send_deactivate_message()
+
     def activate(self):
         self.active = True
         self.send_active_message()
@@ -67,17 +74,19 @@ class Atom(object):
             for index, atom_id in enumerate(self.messages):
                 if self.memory.get_message(atom_id,"active") and self.active is False: 
                     #Incremement timer
-                    self.timer += 1
-                    if self.timer == self.message_delays[index]:
+                    self.time_delayed += 1
+                    if self.time_delayed == self.message_delays[index]:
                         self.activate()
 
 class SensorAtom(Atom):
     """
     The base class for a sensor atom
     """
-    def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+    def __init__(self,id, memory=None,messages=None,message_delays=None,
                  sensors=None,sensory_conditions=None):
-        super(SensorAtom, self).__init__(id,memory=memory,messages=messages,message_delays=message_delays,parameters=parameters)
+        super(SensorAtom, self).__init__(id,memory=memory,messages=messages,
+                                    message_delays=message_delays
+                                    )
         self.sensors = sensors
         if self.sensors == None:
             self.sensors = []
@@ -89,7 +98,7 @@ class SensorAtom(Atom):
 
     def act(self):
         self.times_tested = self.times_tested+1
-        self.send_message([sensor for sensor in self.sensors])
+        self.send_message("output",[sensor for sensor in self.sensor_input])
 
     def activate(self):
         self.get_sensor_input()
@@ -101,12 +110,13 @@ class SensorAtom(Atom):
             Atom.activate(self)
     def get_sensor_input(self):
         pass
+
 class TransformAtom(Atom):
     """
     The base class for a sensor atom
     """
-    def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None):
-        super(TransformAtom, self).__init__(id,memory,messages,message_delays,parameters)
+    def __init__(self,id, memory=None,messages=None,message_delays=None):
+        super(TransformAtom, self).__init__(id,memory,messages,message_delays)
         self.type = "transform"
 
 class MotorAtom(Atom):
@@ -115,9 +125,16 @@ class MotorAtom(Atom):
     """
     def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
                  motors=None):
-        super(MotorAtom, self).__init__(id,memory,messages,message_delays,parameters)
+        super(MotorAtom, self).__init__(id,memory,messages,message_delays)
         self.motors = motors
+        self.parameters = parameters
         self.type = "motor"
+
+    def act(self):
+        self.motion()
+
+    def motion(self):
+        pass
 
 class GameAtom(Atom):
     """
@@ -136,9 +153,12 @@ class NaoSensorAtom(SensorAtom):
     """
     The base class for a Nao specific sensor atom
     """
-    def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+    def __init__(self,id, memory=None,messages=None,message_delays=None,
                  sensors=None,sensory_conditions=None,nao_memory=None):
-        super(NaoSensorAtom, self).__init__(id,memory=memory,messages=messages,message_delays=message_delays,parameters=parameters,sensors=sensors,sensory_conditions=sensory_conditions)
+        super(NaoSensorAtom, self).__init__(
+                                    id,memory=memory,messages=messages,message_delays=message_delays,
+                                    sensors=sensors,sensory_conditions=sensory_conditions
+                                    )
         self.nao_memory = nao_memory
     def get_sensor_input(self):
         # print "in NaoSensorAtom"
@@ -146,3 +166,67 @@ class NaoSensorAtom(SensorAtom):
         for s in self.sensors:
             self.sensor_input.append(self.nao_memory.getSensorValue(s))
             print self.sensor_input
+
+######################
+# decorators
+######################
+
+def _check_active_timer(f):
+    """
+    This is a decorator to make sure
+    the should still be active
+    """
+    def wrapped(self,*args):
+        if self.time_active >= self.parameters["time_active"]:
+            self.deactivate()
+            self.active = False
+            self.time_delayed = 0
+            self.time_active = 0
+        else:
+            return f(self,*args)
+    return wrapped
+
+class NaoMotorAtom(MotorAtom):
+    """
+    The base class for a Nao specific sensor atom
+    """
+    def __init__(self,id, memory=None,messages=None,message_delays=None,parameters=None,
+                 motors=None,nao_motion=None,nao_memory=None):
+        super(NaoMotorAtom, self).__init__(
+                                    id,memory=memory,messages=messages,
+                                    message_delays=message_delays,parameters=parameters,
+                                    motors=motors
+                                    )
+        self.nao_memory = nao_memory
+        self.nao_motion = nao_motion
+
+    def send_motors_message(self,motors,angles):
+        self.send_message("motors",motors)
+        self.send_message("angles",angles)
+    @_check_active_timer
+    def motion(self):
+        self.time_active += 1
+        angles = []
+        names = []
+
+        for index, i in enumerate(self.motors):
+            name = self.nao_memory.getMotorName(i)
+            if name in names:
+                continue
+            print "name:",name
+            names.append(name)
+            angles.append(self.get_safe_angles(name,self.parameters["motor_parameters"][index]))
+        self.nao_motion.motion.setAngles(names,angles,1)#Actually move the motors according to values in angles list.
+        self.send_motors_message(self.motors,angles)
+
+    def get_safe_angles(self,name,angle):
+        limits = self.nao_motion.motion.getLimits(name)
+        # print("limits for {0}: {1}".format(name,limits))
+        lo = limits[0][0]
+        hi = limits[0][1]
+        if angle < lo:
+            angle = float(lo)
+        elif angle > hi:
+            angle = float(hi)
+        return angle
+

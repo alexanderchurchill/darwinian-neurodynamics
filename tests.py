@@ -31,7 +31,10 @@ atoms = {}
 #Create an instance of a basic motor function module. 
 global bmf_global
 bmf_global = NaoMotorFunction("bmf","127.0.0.1")
-
-basic_molecule = NAOActorMolecule(memory,atoms,nao_mem_global)
-print(basic_molecule)
-basic_molecule.activate()
+bmf_global.rest()
+bm = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
+print(bm)
+bm.activate()
+bm.act()
+bm.conditional_activate()
+bm.act()

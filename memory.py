@@ -27,9 +27,9 @@ class Messages(object):
         """
         self.message_list[str(id)][str(key)] = value
 
-
-    def clear_from_memory(self,id,value):
-        pass
+    @_all_strings
+    def clear_all_from_memory(self,id):
+        self.message_list[id]={}
 
     @_all_strings
     def get_message(self,id,key):

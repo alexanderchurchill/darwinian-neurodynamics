@@ -83,15 +83,18 @@ class ActorMolecule(Molecule):
             atom.conditional_activate()
 
     def act(self):
-        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
+        self.times_tested += 1
+        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is True]:
             atom.act()
+
 class NAOActorMolecule(ActorMolecule):
     """
     The data structure for an actor molecule
     """
-    def __init__(self, memory,atoms,nao_memory):
+    def __init__(self, memory,atoms,nao_memory,nao_motion):
         super(NAOActorMolecule, self).__init__(memory,atoms)
         self.nao_memory = nao_memory
+        self.nao_motion = nao_motion
         self.constructor()
         self.set_connections()
     def constructor(self):
@@ -101,9 +104,32 @@ class NAOActorMolecule(ActorMolecule):
         # self.totalCount = self.totalCount + 1
         # self.actors[self.totalCount] = actorClass(copyA = False, atomA = None, typeA = "motorP", nameA = "actor",count = self.totalCount, sensors = None, messages = [self.totalCount-1], messageDelays = [2], motors = [self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor()], function = "sequence", parameters = [[random.randint(0,3)], [2*(random.random()-0.5), 2*(random.random()-0.5), 2*(random.random()-0.5)], [1, 1, 1]])
         # self.totalCount = self.totalCount + 1
-        atom_1 = NaoSensorAtom(id=1,memory=self.memory,nao_memory=self.nao_memory,sensors=[143],sensory_conditions=[-2.0],messages=[],message_delays=[0])
+        atom_1 = NaoSensorAtom(id=1,memory=self.memory,nao_memory=self.nao_memory,
+            sensors=[143],
+            sensory_conditions=[-10.0],
+            messages=[],
+            message_delays=[0])
         atom_2 = TransformAtom(id=2,memory=self.memory,messages=[],message_delays=[1])
-        atom_3 = MotorAtom(id=3,memory=self.memory,messages=[],message_delays=[1],motors = [self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor(),self.nao_memory.getRandomMotor()], parameters = [[random.randint(0,3)], [2*(random.random()-0.5),2*(random.random()-0.5),2*(random.random()-0.5)], [1, 1, 1]])
+        
+        atom_3 = NaoMotorAtom(
+            id=3,memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
+            messages=[],
+            message_delays=[1],
+            motors = [
+            self.nao_memory.getRandomMotor(),
+            self.nao_memory.getRandomMotor(),
+            self.nao_memory.getRandomMotor()
+            ],
+            parameters = {
+            "time_active":random.randint(0,3),
+            "motor_parameters":[
+            2*(random.random()-0.5),
+            2*(random.random()-0.5),
+            2*(random.random()-0.5)
+            ],
+            "times":[1, 1, 1]
+            })
+        # add atom to shared list of atoms
         for a in [atom_1,atom_2,atom_3]:
             self.atoms[a.get_id()]=a
         self.molecular_graph = nx.DiGraph()

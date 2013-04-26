@@ -261,6 +261,49 @@ class NaoMotorAtom(MotorAtom):
             angle = float(hi)
         return angle
 
+    def mutate_motors(self,mutation_rate):
+        for i,motor in enumerate(self.motors):
+            if random.random() < mutation_rate:
+                self.motors[i] = self.get_unique_rand_motor()
+
+    def mutate_angles(self,mutation_rate):
+        angles = self.parameters["motor_parameters"]
+        for i,angle in enumerate(angles):
+            if random.random() < mutation_rate:
+                angle = 0.5*(random.random()-0.5) + angle
+            self.parameters["motor_parameters"][i] = angle
+
+    def mutate_delays(self,mutation_rate):
+        if random.random() < mutation_rate:
+            self.parameters["time_active"] = random.randint(1,5)
+        if self.parameters["time_active"] < 1:
+            self.parameters["time_active"] = 1
+        elif self.parameters["time_active"] > 5:
+            self.parameters["time_active"] = 5
+
+        for i,delay in enumerate(self.message_delays):
+            if random.random() < mutation_rate:
+                self.message_delays[i]= random.randint(1,5)
+
+
+    def mutate(self):
+        self.mutate_delays(0.05)
+        self.mutate_motors(0.05)
+        self.mutate_angles(0.05)
+
+    def get_unique_rand_motor(self):
+        motor = self.nao_memory.getRandomMotor()
+        while motor in self.motors:
+            motor = self.nao_memory.getRandomMotor()
+        return motor
+
+    def print_atom(self):
+        print "id: {0}".format(self.get_id())
+        print "time_active: {0}".format(self.parameters["time_active"])
+        print "message_delays: {0}".format(self.message_delays)
+        print "motors: {0}".format(self.motors)
+        print "motor_angles: {0}".format(self.parameters["motor_parameters"])
+
 class NaoMaxSensorGame(GameAtom):
     """A simple NAO game"""
     def __init__(self,memory=None,messages=None,message_delays=None):

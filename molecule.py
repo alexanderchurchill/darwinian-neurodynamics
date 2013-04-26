@@ -22,6 +22,7 @@ class Molecule(object):
         self.type = "base"
         self.times_tested = 0
         id = ""
+        self.fitness = -999999
     def constructor(self):
         pass
 
@@ -45,6 +46,14 @@ class Molecule(object):
             atom = self.atoms[n]
             atoms.append(atom)
         return atoms
+
+    def get_atom(self,id):
+        return self.memory.get_atom(id)
+
+    def deactivate(self):
+        self.active = False
+        self.active_hist = False
+
     def __str__(self):
         # long oneliner!
         return " - ".join(
@@ -60,6 +69,7 @@ class GameMolecule(Molecule):
     def __init__(self,*args):
         super(GameMolecule, self).__init__(*args)
         self.type = "game"
+        self.game_atoms = []
     def activate(self):
         """
         activate molecule
@@ -80,9 +90,20 @@ class GameMolecule(Molecule):
                 atom.act()
     def conditional_activate(self):
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
-            # print "looking at:",atom.id
             atom.conditional_activate()
 
+    def get_fitness(self):
+        fitness = -999999
+        for game in self.game_atoms:
+            fitness = self.get_atom(game).get_fitness()
+        return fitness
+
+    def deactivate(self):
+        Molecule.deactivate(self)
+        for game in self.game_atoms:
+            game = self.get_atom(game)
+            if game is not None:
+                game.state = []
 
 class ActorMolecule(Molecule):
     """
@@ -130,7 +151,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
     The data structure for a basic game molecule
     """
     def __init__(self, memory,atoms,nao_memory):
-        super(GameMolecule, self).__init__(memory,atoms)
+        super(NaoMaxSensorGameMolecule, self).__init__(memory,atoms)
         self.nao_memory = nao_memory
         self.constructor()
         self.set_connections()
@@ -163,6 +184,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             (atom_1.get_id(),atom_2.get_id()),
             (atom_2.get_id(),atom_3.get_id())
             ])
+        self.game_atoms.append(atom_3.get_id())
 
 class NAOActorMolecule(ActorMolecule):
     """
@@ -193,11 +215,7 @@ class NAOActorMolecule(ActorMolecule):
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
             message_delays=[2],
-            motors = [
-            self.nao_memory.getRandomMotor(),
-            self.nao_memory.getRandomMotor(),
-            self.nao_memory.getRandomMotor()
-            ],
+            motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
             "time_active":random.randint(0,3),
             "motor_parameters":[
@@ -212,11 +230,7 @@ class NAOActorMolecule(ActorMolecule):
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
             message_delays=[3],
-            motors = [
-            self.nao_memory.getRandomMotor(),
-            self.nao_memory.getRandomMotor(),
-            self.nao_memory.getRandomMotor()
-            ],
+            motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
             "time_active":random.randint(0,3),
             "motor_parameters":[
@@ -239,3 +253,12 @@ class NAOActorMolecule(ActorMolecule):
             (atom_2.get_id(),atom_3.get_id()),
             (atom_2.get_id(),atom_4.get_id())
             ])
+
+    def get_random_motors(self,nao_memory,n_motors):
+        motors = []
+        for i in range(0,n_motors):
+            motor = nao_memory.getRandomMotor()
+            while motor in motors:
+                motor = nao_memory.getRandomMotor()
+            motors.append(motor)
+        return motors

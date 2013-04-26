@@ -46,4 +46,10 @@ class Messages(object):
     def get_all_messages(self,id):
         message = self.message_list[id]
         return message
-
+        
+    @_all_strings
+    def get_atom(self,id):
+        if id in self.atoms:
+            return self.atoms[id]
+        else:
+            return None

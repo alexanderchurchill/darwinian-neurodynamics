@@ -40,21 +40,47 @@ memory.molecules[gm.id] = gm
 print(bm)
 m = memory.message_list
 print m
-bm.activate()
-gm.activate()
-for t in range(0,10):
-	print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
-	bm.act()
-	bm.conditional_activate()
-	gm.act()
-	gm.conditional_activate()
-	print t
-	print m
-	sleep(0.1)
-# print "fitness:",atoms["g3"].get_fitness()
-# print "fitness:",atoms["g3"].state
-population = []
-for i in range(0,10):
-	molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
-	memory.molecules[molecule.id] = molecule
-	population.append(molecule)
+for atom in bm.get_atoms_as_list():
+	if atom.type == "motor":
+		ma = atom
+
+# bm.activate()
+# gm.activate()
+# for t in range(0,10):
+# 	print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
+# 	bm.act()
+# 	bm.conditional_activate()
+# 	gm.act()
+# 	gm.conditional_activate()
+# 	print t
+# 	print m
+# 	sleep(0.1)
+
+
+# population = []
+# for i in range(0,10):
+# 	molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
+# 	memory.molecules[molecule.id] = molecule
+# 	population.append(molecule)
+
+# gm = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global)
+# for bm in population:
+# 	bmf_global.rest()
+# 	bm.activate()
+# 	gm.activate()
+# 	for t in range(0,10):
+# 		print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
+# 		bm.act()
+# 		bm.conditional_activate()
+# 		gm.act()
+# 		gm.conditional_activate()
+# 		print t
+# 		print m
+# 		sleep(0.1)
+# 		game = None
+# 	bm.fitness = gm.get_fitness()
+# 	print "fitness:",bm.fitness
+# 	gm.deactivate()
+# print "fitnesses:"
+# for bm in population:
+# 	print bm.fitness

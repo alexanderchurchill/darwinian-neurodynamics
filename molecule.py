@@ -4,6 +4,13 @@ Everything related to a molecule is in here
 from atom import *
 import random
 import networkx as nx
+import matplotlib.pyplot as plt
+
+graph_colours = {
+        "motor":"red",
+        "sensory":"blue",
+        "transform":"green"
+        }
 
 ######################
 # Base Molecules
@@ -54,6 +61,9 @@ class Molecule(object):
         self.active = False
         self.active_hist = False
 
+    def mutate(self):
+        pass
+
     def __str__(self):
         # long oneliner!
         return " - ".join(
@@ -98,6 +108,11 @@ class GameMolecule(Molecule):
             fitness = self.get_atom(game).get_fitness()
         return fitness
 
+    def get_state_history(self):
+        for game in self.game_atoms:
+            state = self.get_atom(game).state
+        return state
+
     def deactivate(self):
         Molecule.deactivate(self)
         for game in self.game_atoms:
@@ -128,17 +143,11 @@ class ActorMolecule(Molecule):
 
     def conditional_activate(self):
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
-            # print "looking at:",atom.id
             atom.conditional_activate()
 
     def act(self):
         self.times_tested += 1
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is True]:
-            # for connected_from in atom.messages:
-            #     parent_active = self.memory.get_message(connected_from,"active")
-            #     if parent_active is False:
-            #         atom.deactivate()
-            #         break
             if atom.active is True:
                 atom.act()
 
@@ -162,7 +171,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
 
     def constructor(self):
         atom_1 = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[143],
+            sensors=[141],
             sensory_conditions=[-10.0],
             messages=[],
             message_delays=[0])
@@ -190,19 +199,20 @@ class NAOActorMolecule(ActorMolecule):
     """
     The data structure for a Nao Actor molecule
     """
-    def __init__(self, memory,atoms,nao_memory,nao_motion):
+    def __init__(self, memory,atoms,nao_memory,nao_motion,duplication=False):
         super(NAOActorMolecule, self).__init__(memory,atoms)
         self.nao_memory = nao_memory
         self.nao_motion = nao_motion
-        self.constructor()
-        self.set_connections()
+        if duplication == False:
+            self.constructor()
+            self.set_connections()
         id = "m-{0}".format(random.randint(1,5000))
         while id in self.memory.molecules:
             id = "m-{0}".format(random.randint(1,5000))
         self.id = id
     def constructor(self):
         atom_1 = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[143],
+            sensors=[141],
             sensory_conditions=[-10.0],
             messages=[],
             message_delays=[0])
@@ -241,13 +251,15 @@ class NAOActorMolecule(ActorMolecule):
             "times":[1, 1, 1]
             })
         # add atom to shared list of atoms
+        # for i,a in enumerate([atom_1,atom_2,atom_3,atom_4]):
+        #     a.id=str(1+i)
         for a in [atom_1,atom_2,atom_3,atom_4]:
             self.atoms[a.get_id()]=a
         self.molecular_graph = nx.DiGraph()
-        self.molecular_graph.add_node(atom_1.get_id())
-        self.molecular_graph.add_node(atom_2.get_id())
-        self.molecular_graph.add_node(atom_3.get_id())
-        self.molecular_graph.add_node(atom_4.get_id())
+        self.molecular_graph.add_node(atom_1.get_id(),color=graph_colours[atom_1.type])
+        self.molecular_graph.add_node(atom_2.get_id(),color=graph_colours[atom_2.type])
+        self.molecular_graph.add_node(atom_3.get_id(),color=graph_colours[atom_2.type])
+        self.molecular_graph.add_node(atom_4.get_id(),color=graph_colours[atom_4.type])
         self.molecular_graph.add_edges_from([
             (atom_1.get_id(),atom_2.get_id()),
             (atom_2.get_id(),atom_3.get_id()),
@@ -262,3 +274,37 @@ class NAOActorMolecule(ActorMolecule):
                 motor = nao_memory.getRandomMotor()
             motors.append(motor)
         return motors
+    def mutate(self):
+        for atom in self.get_atoms_as_list():
+            atom.mutate()
+    def deactivate(self):
+        for atom in self.get_atoms_as_list():
+            atom.deactivate()
+
+    def duplicate(self):
+        new_molecule = NAOActorMolecule(memory=self.memory,
+                                        atoms=self.atoms,
+                                        nao_memory=self.nao_memory,
+                                        nao_motion=self.nao_motion,
+                                        duplication=True)
+        graph_dict = {}
+        new_graph_dict = {}
+        new_graph = nx.DiGraph()
+        # duplicate graph with new atoms
+        for node in self.molecular_graph.nodes():
+            graph_dict[node]={}
+            graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
+            new_atom = self.atoms[node].duplicate()
+            self.atoms[new_atom.get_id()]=new_atom
+            graph_dict[node]["child"] = new_atom.get_id()
+            new_graph_dict[new_atom.get_id()]={}
+            new_graph_dict[new_atom.get_id()]["parent"]=node
+            new_graph.add_node(new_atom.get_id())
+        # add edges
+        for node in new_graph.nodes():
+            parent = new_graph_dict[node]["parent"]
+            for p in self.molecular_graph.predecessors(parent):
+                new_graph.add_edge(graph_dict[p]["child"],node)
+        new_molecule.molecular_graph=new_graph
+        new_molecule.set_connections()
+        return new_molecule

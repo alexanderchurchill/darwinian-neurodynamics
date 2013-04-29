@@ -239,15 +239,14 @@ class NAOActorMolecule(ActorMolecule):
         atom_3 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[0],
-            motors = [0,1,2,3],
+            message_delays=[random.randint(0,300)],
+            motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":100,
+            "time_active":random.randint(0,3),
             "motor_parameters":[
-            1,
-            0,
-            1,
-            1
+            2*(random.random()-0.5),
+            2*(random.random()-0.5),
+            2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
             })
@@ -255,28 +254,28 @@ class NAOActorMolecule(ActorMolecule):
         atom_4 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[100],
-            motors = [20,21,17],
+            message_delays=[random.randint(0,300)],
+            motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":100,
+            "time_active":random.randint(0,3),
             "motor_parameters":[
-            -1,
-            -1,
-            1
+            2*(random.random()-0.5),
+            2*(random.random()-0.5),
+            2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
             })
         atom_5 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[150],
-            motors = [12,13],
+            message_delays=[random.randint(0,300)],
+            motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":100,
+            "time_active":random.randint(0,3),
             "motor_parameters":[
-            -1,
-            -1,
-            1
+            2*(random.random()-0.5),
+            2*(random.random()-0.5),
+            2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
             })

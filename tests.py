@@ -53,7 +53,7 @@ def assess_fitness(individual,game):
     sleep(0.5)
     bmf_global.rest()
     sleep(0.5)
-    for t in range(0,100):
+    for t in range(0,300):
         # print "sensor:{0}".format(nao_mem_global.getSensorValue(141))
         individual.act()
         individual.conditional_activate()
@@ -210,7 +210,7 @@ bmf_global.rest()
 sleep(1)
 population[best].activate()
 gm.activate()
-for t in range(0,100):
+for t in range(0,300):
     print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
     population[best].act()
     population[best].conditional_activate()

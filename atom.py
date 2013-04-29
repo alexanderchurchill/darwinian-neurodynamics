@@ -2,7 +2,7 @@
 Everything related to an atom is in here
 """
 
-import random,copy
+import random,copy,string
 
 ######################
 # decorators
@@ -81,9 +81,9 @@ class Atom(object):
         self.send_message("active",False)
 
     def create_id(self):
-        id = "a-{0}".format(random.randint(1,5000))
+        id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
         while id in self.memory.atoms:
-            id = "a-{0}".format(random.randint(1,5000))
+            id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
         return id
 
     def get_id(self):
@@ -108,6 +108,14 @@ class Atom(object):
                     self.time_delayed += 1
                     if self.time_delayed >= self.message_delays[index]:
                         self.activate()
+
+    def can_connect_to(self):
+        return []
+    def _rand_char(self):
+        return ""+random.choice(string.letters)+random.choice(string.letters)
+
+    def __str__(self):
+        return str(self.get_id())
 
 class SensorAtom(Atom):
     """
@@ -195,6 +203,9 @@ class MotorAtom(Atom):
     def motion(self):
         pass
 
+    def can_connect_to(self):
+        return ["transform","motor"]
+
 class GameAtom(Atom):
     """
     The base class for a sensor atom
@@ -277,11 +288,10 @@ class NaoMotorAtom(MotorAtom):
 
         for index, i in enumerate(self.motors):
             name = self.nao_memory.getMotorName(i)
-            if name in names:
-                continue
             names.append(name)
             angles.append(self.get_safe_angles(name,self.parameters["motor_parameters"][index]))
         self.nao_motion.motion.setAngles(names,angles,1)
+        print "moving:\nnames:{0}\nangles:{1}".format(names,angles)
         self.send_motors_message(self.motors,angles)
 
     def get_safe_angles(self,name,angle):
@@ -308,20 +318,20 @@ class NaoMotorAtom(MotorAtom):
 
     def mutate_delays(self,mutation_rate):
         if random.random() < mutation_rate:
-            self.parameters["time_active"] = random.randint(1,5)
+            self.parameters["time_active"] = random.randint(1,25)
         if self.parameters["time_active"] < 1:
             self.parameters["time_active"] = 1
-        elif self.parameters["time_active"] > 5:
-            self.parameters["time_active"] = 5
+        elif self.parameters["time_active"] > 25:
+            self.parameters["time_active"] = 25
 
         for i,delay in enumerate(self.message_delays):
             if random.random() < mutation_rate:
-                self.message_delays[i]= random.randint(1,5)
+                self.message_delays[i]= random.randint(1,25)
 
     def mutate(self):
-        self.mutate_delays(0.05)
-        self.mutate_motors(0.05)
-        self.mutate_angles(0.05)
+        self.mutate_delays(0.55)
+        self.mutate_motors(0.25)
+        self.mutate_angles(0.25)
 
     def get_unique_rand_motor(self):
         motor = self.nao_memory.getRandomMotor()

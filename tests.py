@@ -18,8 +18,6 @@ broker=ALBroker("localbroker","0.0.0.0",   # listen to anyone
        0,           # find a free port and use it
        "127.0.0.1",         # parent broker IP
        9559)
-TRIAL_TIME = 10
-from_file = False
 
 fitnessHistory = []
 def flatten(x):
@@ -55,13 +53,13 @@ def assess_fitness(individual,game):
     sleep(0.5)
     bmf_global.rest()
     sleep(0.5)
-    for t in range(0,20):
+    for t in range(0,100):
         # print "sensor:{0}".format(nao_mem_global.getSensorValue(141))
         individual.act()
         individual.conditional_activate()
         game.act()
         game.conditional_activate()
-        sleep(0.01)
+        sleep(0.001)
     individual.fitness = game.get_fitness()
     print "state:",game.get_state_history()
     # raw_input()
@@ -133,7 +131,8 @@ print m
 
 
 population = []
-for i in range(0,30):
+pop_size = 30
+for i in range(0,pop_size):
     molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
     memory.molecules[molecule.id] = molecule
     population.append(molecule)
@@ -156,7 +155,7 @@ print "fitness = ",population[best].fitness
 # raw_input()
 
 
-for g in range(0,500):
+for g in range(0,3000):
     ind_1_i = random.randint(0,len(population)-1)
     ind_2_i = random.randint(0,len(population)-1)
     while ind_1_i == ind_2_i:
@@ -189,7 +188,7 @@ for g in range(0,500):
         population[ind_1_i] = ind_1
         ind_1.mutate()
         assess_fitness(ind_1,gm)
-    if g%10 == 0:
+    if g%pop_size == 0:
         # plt.ion()
         plot_fitness(population)
         plt.show()
@@ -208,15 +207,16 @@ print "best = ",best
 print "fitness = ",population[best].fitness
 
 bmf_global.rest()
+sleep(1)
 population[best].activate()
 gm.activate()
-for t in range(0,20):
-    print "sensor:{0}".format(nao_mem_global.getSensorValue(141))
+for t in range(0,100):
+    print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
     population[best].act()
     population[best].conditional_activate()
     gm.act()
     gm.conditional_activate()
-    sleep(0.01)
+    sleep(0.001)
 
 # print gm.get_state_history()
 print gm.get_fitness()

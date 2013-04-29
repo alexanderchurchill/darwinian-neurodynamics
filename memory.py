@@ -46,10 +46,16 @@ class Messages(object):
     def get_all_messages(self,id):
         message = self.message_list[id]
         return message
-        
+
     @_all_strings
     def get_atom(self,id):
         if id in self.atoms:
             return self.atoms[id]
         else:
             return None
+    def add_atom(self,atom):
+        self.atoms[atom.get_id()] = atom
+
+    @_all_strings
+    def delete_molecule(self,id):
+        pass

@@ -9,6 +9,7 @@ from molecule import *
 from memory import Messages
 import networkx as nx
 import pygraphviz as pgv
+from networkx.readwrite import json_graph
 
 #PYTHON SCRIPT FOR RUNNING DARWINIAN NEURODYNAMICS
 
@@ -61,7 +62,7 @@ def assess_fitness(individual,game):
         game.conditional_activate()
         sleep(0.001)
     individual.fitness = game.get_fitness()
-    print "state:",game.get_state_history()
+    # print "state:",game.get_state_history()
     # raw_input()
     # print "fitness:",bm.fitness
     game.deactivate()
@@ -84,7 +85,30 @@ def save_population(g,population):
         graph.layout()
         graph.draw('populations/{0}/{1}.png'.format(g,i))
 
-
+def load_molecule(json,memory,atoms,nao_memory,nao_motion):
+    molecule = NAOActorMolecule(memory,atoms,nao_memory,nao_motion,duplication=True)
+    atoms = json["atoms"]
+    for atom in atoms:
+        id = atom["id"]
+        _class = atom["class"]
+        message_delays = atom["message_delays"]
+        if _class == 'NaoSensorAtom':
+            new_atom = NaoSensorAtom(memory=memory,messages=None,message_delays=message_delays,
+                 sensors=atom["sensors"],sensory_conditions=atom["sensory_conditions"],nao_memory=nao_memory,
+                 id = id)
+            memory.add_atom(new_atom)
+        elif _class == 'TransformAtom':
+            new_atom = TransformAtom(memory=memory,messages=None,message_delays=message_delays,
+                parameters=None,id = id)
+            memory.add_atom(new_atom)
+        elif _class == 'NaoMotorAtom':
+            new_atom = NaoMotorAtom(memory=memory,messages=None,message_delays=message_delays,
+                parameters=atom["parameters"],motors=atom["motors"],nao_motion=nao_motion,
+                nao_memory=nao_memory, id = id)
+            memory.add_atom(new_atom)
+    molecule.molecular_graph=json_graph.loads(json["molecular_graph"])
+    molecule.set_connections()
+    return molecule
 
 #Create memory manager to store dictionary of sensory and motor states
 #All use of memory is through use of the memory manager module. 
@@ -131,7 +155,7 @@ print m
 
 
 population = []
-pop_size = 30
+pop_size = 20
 for i in range(0,pop_size):
     molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
     memory.molecules[molecule.id] = molecule
@@ -155,7 +179,8 @@ print "fitness = ",population[best].fitness
 # raw_input()
 
 
-for g in range(0,3000):
+for g in range(0,pop_size*20):
+    print "iteration:",g
     ind_1_i = random.randint(0,len(population)-1)
     ind_2_i = random.randint(0,len(population)-1)
     while ind_1_i == ind_2_i:
@@ -226,6 +251,3 @@ population[best].deactivate()
 # sleep(0.5)
 # bmf_global.rest()
 # sleep(0.5)
-
-raw_input()
-

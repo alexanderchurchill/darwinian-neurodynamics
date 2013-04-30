@@ -4,7 +4,9 @@ Everything related to a molecule is in here
 from atom import *
 import random
 import networkx as nx
+import pygraphviz as pgv
 import matplotlib.pyplot as plt
+from networkx.readwrite import json_graph
 
 graph_colours = {
         "motor":"red",
@@ -30,6 +32,7 @@ class Molecule(object):
         self.times_tested = 0
         id = ""
         self.fitness = -999999
+        self.json = {}
     def constructor(self):
         pass
 
@@ -78,6 +81,26 @@ class Molecule(object):
                 nodes.append(node)
         return nodes
 
+    def print_graph(self,filename):
+        graph = nx.to_agraph(self.molecular_graph)
+        for n in graph.nodes():
+            try:
+                colour = graph_colours[self.get_atom(n)].type
+            except:
+                colour = 'black'
+            graph.get_node(n).attr['color'] = colour
+        graph.layout()
+        graph.draw('{0}.png'.format(filename))
+
+    def to_json(self):
+        self.json["molecular_graph"] = json_graph.dumps(self.molecular_graph)
+        self.json["type"] = self.type
+        self.json["class"]=self.__class__.__name__
+        self.json["atoms"] = [a.get_json() for a in self.get_atoms_as_list()]
+
+    def get_json(self):
+        self.to_json()
+        return self.json
 
     def __str__(self):
         # long oneliner!
@@ -279,23 +302,6 @@ class NAOActorMolecule(ActorMolecule):
             ],
             "times":[1, 1, 1]
             })
-        # atom_6 = NaoMotorAtom(
-        #     memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
-        #     messages=[],
-        #     message_delays=[random.randint(0,20)],
-        #     motors = self.get_random_motors(self.nao_memory,3),
-        #     parameters = {
-        #     "time_active":random.randint(0,3),
-        #     "motor_parameters":[
-        #     2*(random.random()-0.5),
-        #     2*(random.random()-0.5),
-        #     2*(random.random()-0.5)
-        #     ],
-        #     "times":[1, 1, 1]
-        #     })
-        # add atom to shared list of atoms
-        # for i,a in enumerate([atom_1,atom_2,atom_3,atom_4]):
-        #     a.id=str(1+i)
         for a in [atom_1,atom_2,atom_3,atom_4,atom_5]:
             self.atoms[a.get_id()]=a
         self.molecular_graph = nx.DiGraph()
@@ -319,6 +325,7 @@ class NAOActorMolecule(ActorMolecule):
                 motor = nao_memory.getRandomMotor()
             motors.append(motor)
         return motors
+
     def mutate(self):
         # intra atomic mutations
         for atom in self.get_atoms_as_list():
@@ -330,20 +337,20 @@ class NAOActorMolecule(ActorMolecule):
 
     def create_random_motor_atom(self):
         no_motors = random.choice([1,2,3,4])
-        message_delays_mean = random.choice([0,50,100,150,250])
-        message_delays = [int(random.gauss(message_delays_mean,0.1)*100)]
-        for i in message_delays:
-            if i < 0:
-                i = 0
-            elif i > 300:
-                i = 300
+        # message_delays_mean = random.choice([0,50,100,150,250])
+        # message_delays = [int(random.gauss(message_delays_mean,0.1)*100)]
+        # for i in message_delays:
+        #     if i < 0:
+        #         i = 0
+        #     elif i > 300:
+        #         i = 300
         atom = NaoMotorAtom(
                     memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
                     messages=[],
-                    message_delays=[message_delays],
+                    message_delays=[random.randint(0,300)],
                     motors = self.get_random_motors(self.nao_memory,no_motors),
                     parameters = {
-                    "time_active":random.randint(5,30),
+                    "time_active":random.randint(5,50),
                     "motor_parameters":[2*(random.random()-0.5) for i in range(0,no_motors)],
                     "times":[1, 1, 1]
                     })
@@ -368,7 +375,10 @@ class NAOActorMolecule(ActorMolecule):
         delete_list = [atom_id]
         atom = self.get_atom(atom_id)
         successors = self.molecular_graph.successors(atom_id)
-        for node in successors:
+        open_list = successors
+        while len(open_list) > 0:
+            node = open_list.pop(0)
+            open_list += [s for s in self.molecular_graph.successors(node) if s not in open_list]
             to_delete = True
             for n in self.molecular_graph.predecessors(node):
                 if n not in delete_list:
@@ -380,7 +390,8 @@ class NAOActorMolecule(ActorMolecule):
 
     def delete_atom_mutation(self):
         atoms = self.find_atoms_of_types(self.molecular_graph,'motor')
-        self.delete_atom(random.choice(atoms))
+        deleting = random.choice(atoms)
+        self.delete_atom(deleting)
 
 
     def deactivate(self):

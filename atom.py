@@ -118,7 +118,7 @@ class Atom(object):
         return ""+random.choice(string.letters)+random.choice(string.letters)
 
     def to_json(self):
-        for variable in ["id","message_delays","type"]:
+        for variable in ["id","message_delays","type","time_active"]:
             self.json[variable] = self.__getattribute__(variable)
         self.json["class"]=self.__class__.__name__
 
@@ -164,6 +164,9 @@ class SensorAtom(Atom):
     def get_sensor_input(self):
         pass
 
+    def can_connect_to(self):
+        return ["sensory"]
+
     def to_json(self):
         Atom.to_json(self)
         for variable in ["sensors","sensory_conditions"]:
@@ -192,6 +195,16 @@ class TransformAtom(Atom):
         output = inp
         self.send_message("output",inp)
 
+    def get_input(self):
+        """
+        Reads the output messages sent by the atoms
+        connected to this one
+        """
+        inp = []
+        for m in self.messages:
+            inp+=self.memory.get_message(m,'output')
+        return inp
+
     def duplicate(self):
         new_atom = TransformAtom(memory=self.memory,
                                 messages=[],
@@ -207,6 +220,78 @@ class TransformAtom(Atom):
         output += "messages: {0}\n".format(self.messages)
         output += "message_delays: {0}\n".format(self.message_delays)
         return output
+
+    def can_connect_to(self):
+        return ["sensory"]
+
+    def to_json(self):
+        Atom.to_json(self)
+        for variable in ["parameters"]:
+            self.json[variable] = self.__getattribute__(variable)
+
+class LinearTransformAtom(TransformAtom):
+    """
+    Atom used to transform sensor input to output
+    """
+    def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,id=None,n=5):
+        super(LinearTransformAtom, self).__init__(memory,messages,message_delays,id=id)
+        self.n  = n #size of matrix
+        self.t_matrix = [] #creates nxn matrix (with an extra bias)
+        for i in range(0,self.n+1):
+            self.t_matrix.append([])
+            for j in range(0,5):
+                self.t_matrix[i] += [0]
+        self.init_t_matrix()
+
+    @_check_active_timer
+    def act(self):
+        input = self.get_input()
+
+
+    def init_t_matrix(self):
+        for m,row in enumerate(self.t_matrix):
+            for n,cell in enumerate(row):
+                self.t_matrix[m][n]=random.gauss(0,1)
+                if self.t_matrix[m][n] > 1:
+                    self.t_matrix[m][n] = 1
+                elif self.t_matrix[m][n] < -1:
+                    self.t_matrix[m][n] = -1
+
+    def init_test_matrix(self):
+        for i,row in enumerate(self.t_matrix):
+            for j,column in enumerate(row):
+                self.t_matrix[i][j] = i
+
+    def get_t_matrix(self):
+        return self.t_matrix
+
+    def set_t_matrix(self):
+        self.t_matrix = t_matrix
+
+    def get_output(self,input,len_output):
+        """
+        takes an input vector (of max length n)
+        and produces an output vector (of max length n)
+        """
+        input_bias = input + [1]
+        if len_output > self.n:
+            len_output = self.n
+        output = [0]*len_output
+        for column in range(0,len_output):
+            for i,input in enumerate(input_bias):
+                output[column] += self.t_matrix[i][column]*input
+        return output
+
+    def duplicate(self):
+        new_atom = LinearTransformAtom(memory=self.memory,
+                                messages=[],
+                                message_delays=copy.deepcopy(self.message_delays),
+                                parameters=copy.deepcopy(self.parameters),
+                                )
+        new_atom.set_t_matrix(copy.deepcopy(self.get_t_matrix))
+        return new_atom
+
+
 
 class MotorAtom(Atom):
     """
@@ -296,7 +381,7 @@ class NaoMotorAtom(MotorAtom):
     The base class for a Nao specific sensor atom
     """
     def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,
-                 motors=None,nao_motion=None,nao_memory=None,id=None):
+                 motors=None,nao_motion=None,nao_memory=None,use_input=False,id=None):
         super(NaoMotorAtom, self).__init__(
                                     memory=memory,messages=messages,
                                     message_delays=message_delays,parameters=parameters,
@@ -304,6 +389,7 @@ class NaoMotorAtom(MotorAtom):
                                     )
         self.nao_memory = nao_memory
         self.nao_motion = nao_motion
+        self.use_input = use_input
 
     def send_motors_message(self,motors,angles):
         self.send_message("motors",motors)
@@ -312,14 +398,18 @@ class NaoMotorAtom(MotorAtom):
     @_check_active_timer
     def motion(self):
         self.time_active += 1
-        angles = []
+        safe_angles = []
         names = []
-
+        if self.use_input:
+            # here we are using input from another atom, e.g. transfer atom
+            angles = self.get_input()
+        else:
+            angles = self.parameters["motor_parameters"]
         for index, i in enumerate(self.motors):
             name = self.nao_memory.getMotorName(i)
             names.append(name)
-            angles.append(self.get_safe_angles(name,self.parameters["motor_parameters"][index]))
-        self.nao_motion.motion.setAngles(names,angles,1)
+            safe_angles.append(self.get_safe_angles(name,angles[index]))
+        self.nao_motion.motion.setAngles(names,safe_angles,1)
         # print "moving:\nnames:{0}\nangles:{1}".format(names,angles)
         self.send_motors_message(self.motors,angles)
 
@@ -367,6 +457,17 @@ class NaoMotorAtom(MotorAtom):
         while motor in self.motors:
             motor = self.nao_memory.getRandomMotor()
         return motor
+###############################Deprecate this:
+    def get_input(self):
+        """
+        Reads the output messages sent by the atoms
+        connected to this one
+        """
+        inp = []
+        for m in self.messages:
+            inp+=self.memory.get_message(m,'output')
+        return inp
+
 
     def print_atom(self):
         output = ""
@@ -385,7 +486,8 @@ class NaoMotorAtom(MotorAtom):
                                 parameters = copy.deepcopy(self.parameters),
                                 motors=copy.deepcopy(self.motors),
                                 nao_motion=self.nao_motion,
-                                nao_memory=self.nao_memory
+                                nao_memory=self.nao_memory,
+                                use_input= self.use_input
                                 )
         return new_atom
 

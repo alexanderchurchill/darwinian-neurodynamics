@@ -84,6 +84,10 @@ def save_population(g,population):
             graph.get_node(n).attr['color'] = graph_colours[memory.atoms[n].type]
         graph.layout()
         graph.draw('populations/{0}/{1}.png'.format(g,i))
+        json_output = p.get_json()
+        file = open('populations/{0}/{1}.json'.format(g,i),'w')
+        file.write(str(json_output))
+        file.close()
 
 def load_molecule(json,memory,atoms,nao_memory,nao_motion):
     molecule = NAOActorMolecule(memory,atoms,nao_memory,nao_motion,duplication=True)
@@ -99,7 +103,7 @@ def load_molecule(json,memory,atoms,nao_memory,nao_motion):
             memory.add_atom(new_atom)
         elif _class == 'TransformAtom':
             new_atom = TransformAtom(memory=memory,messages=None,message_delays=message_delays,
-                parameters=None,id = id)
+                parameters=atom["parameters"],id = id)
             memory.add_atom(new_atom)
         elif _class == 'NaoMotorAtom':
             new_atom = NaoMotorAtom(memory=memory,messages=None,message_delays=message_delays,
@@ -155,7 +159,7 @@ print m
 
 
 population = []
-pop_size = 20
+pop_size = 30
 for i in range(0,pop_size):
     molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
     memory.molecules[molecule.id] = molecule
@@ -179,7 +183,7 @@ print "fitness = ",population[best].fitness
 # raw_input()
 
 
-for g in range(0,pop_size*20):
+for g in range(0,pop_size*100):
     print "iteration:",g
     ind_1_i = random.randint(0,len(population)-1)
     ind_2_i = random.randint(0,len(population)-1)
@@ -223,6 +227,12 @@ for g in range(0,pop_size*20):
         print "fitnesses:"
         for p in population:
             print p.fitness
+
+plot_fitness(population)
+plt.show()
+plt.savefig('graphs/{0}.png'.format(g))
+plt.close()
+save_population(g,population)
 
 for i,bm in enumerate(population):
     print "{0}: {1}".format(i,bm.fitness)

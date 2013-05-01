@@ -256,7 +256,7 @@ class NAOActorMolecule(ActorMolecule):
             message_delays=[0])
         atom_2 = TransformAtom(memory=self.memory,messages=[],message_delays=[2],
             parameters = {
-            "time_active":5,
+            "time_active":random.randint(0,100),
             })
 
         atom_3 = NaoMotorAtom(
@@ -265,7 +265,7 @@ class NAOActorMolecule(ActorMolecule):
             message_delays=[random.randint(0,300)],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,3),
+            "time_active":random.randint(0,100),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -280,7 +280,7 @@ class NAOActorMolecule(ActorMolecule):
             message_delays=[random.randint(0,300)],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,3),
+            "time_active":random.randint(0,100),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -294,7 +294,7 @@ class NAOActorMolecule(ActorMolecule):
             message_delays=[random.randint(0,300)],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,3),
+            "time_active":random.randint(0,100),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -331,9 +331,10 @@ class NAOActorMolecule(ActorMolecule):
         for atom in self.get_atoms_as_list():
             atom.mutate()
         if random.random() < 0.05:
-            self.create_and_add_atom()
+            self.create_and_add_motor_atom()
         if random.random() < 0.05:
             self.delete_atom_mutation()
+        self.set_connections()
 
     def create_random_motor_atom(self):
         no_motors = random.choice([1,2,3,4])
@@ -357,11 +358,41 @@ class NAOActorMolecule(ActorMolecule):
         self.memory.add_atom(atom)
         return atom
 
-    def create_and_add_atom(self):
+    def create_and_add_motor_atom(self):
         atom = self.create_random_motor_atom()
         allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
         parent = random.choice(allowed_connectors)
         self.add_atom(atom.get_id(),parent=parent)
+
+    def create_add_add_sensor_atom(self):
+        atom = self.create_random_sensor_atom()
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
+        parent = random.choice(allowed_connectors)
+        self.add_atom(atom.get_id(),parent=parent)
+
+    def create_random_sensor_atom(self):
+        atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
+            sensors=[self.nao_memory.getRandomSensor()],
+            sensory_conditions=[-10.0],
+            messages=[],
+            message_delays=[0])
+        self.memory.add_atom(atom)
+        return atom
+
+    def create_add_add_transform_atom(self):
+        atom = self.create_random_transform_atom()
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
+        parent = random.choice(allowed_connectors)
+        self.add_atom(atom.get_id(),parent=parent)
+
+    def create_random_transform_atom(self):
+        atom = LinearTransformAtom(memory=self.memory,
+            messages=[],
+            message_delays=[random.randint(0,300)],
+            n=5
+            )
+        self.memory.add_atom(atom)
+        return atom
 
     def add_atom(self,atom_id,parent=None,):
         if parent == None:
@@ -393,6 +424,34 @@ class NAOActorMolecule(ActorMolecule):
         deleting = random.choice(atoms)
         self.delete_atom(deleting)
 
+    def crossover(self,other_molecule):
+        self.single_point_crossover(other_molecule)
+
+    def single_point_crossover(self,other_molecule):
+        other_atom = random.choice([atom for atom in other_molecule.get_atoms_as_list()
+                                    if atom.type in ["motor","sensory"]]).duplicate()
+        print "atom being moved:",other_atom.get_id()
+        memory.add_atom(other_atom)
+        self.add_other_atom(self,other_atom.get_id())
+        self.replace_with_other_atom(self,other_atom.get_id())
+
+
+    def add_other_atom(self,other_atom):
+        atom = self.get_atom(other_atom.get_id())
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
+        parent = random.choice(allowed_connectors)
+        self.add_atom(other_atom,parent)
+
+    def replace_with_other_atom(self,other_atom):
+        atom = self.get_atom(atom_id)
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
+        parent = random.choice(allowed_connectors)
+        self.molecular_graph.add_node(other_atom)
+        for p in self.molecular_graph.predecessors(parent):
+            self.molecular_graph.add_edge(p,other_atom)
+        for s in self.molecular_graph.successors(parent):
+            self.molecular_graph.add_edge(other_atom,s)
+        self.molecular_graph.remove_node(parent)
 
     def deactivate(self):
         for atom in self.get_atoms_as_list():

@@ -73,14 +73,33 @@ class Molecule(object):
     def delete_atom(self):
         pass
 
+    def atom_connects_to(self,atom_id):
+        return self.get_atom(atom_id).can_connect_to()
+
     def can_connect_atoms(self,from_atom_id,to_atom_id):
         if self.memory.get_atom(from_atom_id).type in self.memory.get_atom(to_atom_id).can_connect_to():
             return True
         else:
             return False
+
     def add_edge(self,from_atom_id,to_atom_id):
         if self.can_connect_atoms(from_atom_id,to_atom_id):
             self.molecular_graph.add_edge(from_atom_id,to_atom_id)
+
+    def choose_and_add_edge(self,atom_id):
+        atoms = [atom for atom in
+        find_atoms_of_types(self.molecular_graph,atom_connects_to(atom_id))
+        if atom not in self.molecular_graph.predecessors(atom_id)]
+        parent = random.choice(atoms)
+        self.add_edge(parent,atom_id)
+
+    def add_random_edge(self):
+        atom = random.choice(self.molecular_graph.nodes())
+        self.choose_and_add_edge(atom)
+
+    def remove_random_edge(self):
+        atom = random.choice(self.molecular_graph.nodes())
+        self.choose_and_add_edge(atom)
 
     def find_atoms_of_types(self,graph,types):
         nodes = []
@@ -364,6 +383,24 @@ class NAOActorMolecule(ActorMolecule):
         self.memory.add_atom(atom)
         return atom
 
+    def create_and_add_atom(self,a_type=None):
+        if a_type is None:
+            a_type.random.choice(a_type)
+        if a_type == "motor":
+            atom = self.create_random_motor_atom()
+        elif a_type == "sensory":
+            atom = self.create_random_sensor_atom()
+        elif a_type == "transform":
+            atom = self.create_random_sensor_atom()
+        connecting_atom = random.choice(self.molecular_graph.nodes())
+        if random.random() < 0.5:
+            self.add_atom_from(atom.get_id(),connecting_atom)
+        if random.random() < 0.5:
+            self.add_atom_to(atom.get_id(),connecting_atom)
+        self.set_connections()
+
+
+    #deprecated
     def create_and_add_motor_atom(self):
         atom = self.create_random_motor_atom()
         allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
@@ -414,15 +451,13 @@ class NAOActorMolecule(ActorMolecule):
         sensor = self.create_random_sensor_atom()
         transform = self.create_random_transform_atom()
         motor = self.create_random_motor_atom()
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,sensor.can_connect_to())
+        parent = random.choice(allowed_connectors)
         for n in [sensor,transform,motor]:
             self.molecular_graph.add_node(n.get_id())
         self.add_edge(sensor.get_id(),transform.get_id())
         self.add_edge(transform.get_id(),motor.get_id())
-        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,sensor.can_connect_to())
-        print "allowed:",allowed_connectors
-        parent = random.choice(allowed_connectors)
         self.add_atom_from(sensor.get_id(),parent=parent)
-
 
     def add_atom(self,atom_id):
         self.molecular_graph.add_node(atom_id)

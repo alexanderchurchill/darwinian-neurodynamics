@@ -108,14 +108,15 @@ class Atom(object):
         if self.messages is not None:
             for index, atom_id in enumerate(self.messages):
                 if self.memory.get_message(atom_id,"active"):
-                    any_parent_active = True
                     if self.active is False:
                         if self.time_delayed >= self.message_delays[index]:
                             self.activate()
                         #Incremement timer
                         self.time_delayed += 1
-        if any_parent_active == False:
-            self.time_delayed = 0
+        if self.time_delayed > 0:
+            self.time_delayed += 1
+        # if any_parent_active == False:
+        #     self.time_delayed = 0
 
     def can_connect_to(self):
         return []

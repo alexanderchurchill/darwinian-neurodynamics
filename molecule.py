@@ -359,7 +359,8 @@ class NAOActorMolecule(ActorMolecule):
                     "time_active":random.randint(5,50),
                     "motor_parameters":[2*(random.random()-0.5) for i in range(0,no_motors)],
                     "times":[1, 1, 1]
-                    })
+                    },
+                    use_input=True)
         self.memory.add_atom(atom)
         return atom
 
@@ -379,7 +380,8 @@ class NAOActorMolecule(ActorMolecule):
 
     def create_random_sensor_atom(self):
         atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[self.nao_memory.getRandomSensor()],
+            # sensors=[self.nao_memory.getRandomSensor()],
+            sensors=[random.choice([141,142])],
             sensory_conditions=[-10.0],
             messages=[],
             message_delays=[5],
@@ -407,6 +409,20 @@ class NAOActorMolecule(ActorMolecule):
             )
         self.memory.add_atom(atom)
         return atom
+
+    def create_and_add_stm_group(self):
+        sensor = self.create_random_sensor_atom()
+        transform = self.create_random_transform_atom()
+        motor = self.create_random_motor_atom()
+        for n in [sensor,transform,motor]:
+            self.molecular_graph.add_node(n.get_id())
+        self.add_edge(sensor.get_id(),transform.get_id())
+        self.add_edge(transform.get_id(),motor.get_id())
+        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,sensor.can_connect_to())
+        print "allowed:",allowed_connectors
+        parent = random.choice(allowed_connectors)
+        self.add_atom_from(sensor.get_id(),parent=parent)
+
 
     def add_atom(self,atom_id):
         self.molecular_graph.add_node(atom_id)

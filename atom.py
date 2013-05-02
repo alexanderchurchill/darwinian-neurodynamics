@@ -96,7 +96,7 @@ class Atom(object):
         self.active = False
         self.time_delayed = 0
         self.time_active = 0
-        self.memory.clear_all_from_memory(self.id)
+        # self.memory.clear_all_from_memory(self.id)
         self.send_deactivate_message()
 
     def activate(self):
@@ -104,13 +104,18 @@ class Atom(object):
         self.send_active_message()
 
     def conditional_activate(self):
+        any_parent_active = False
         if self.messages is not None:
             for index, atom_id in enumerate(self.messages):
-                if self.memory.get_message(atom_id,"active") and self.active is False: 
-                    #Incremement timer
-                    self.time_delayed += 1
-                    if self.time_delayed >= self.message_delays[index]:
-                        self.activate()
+                if self.memory.get_message(atom_id,"active"):
+                    any_parent_active = True
+                    if self.active is False:
+                        if self.time_delayed >= self.message_delays[index]:
+                            self.activate()
+                        #Incremement timer
+                        self.time_delayed += 1
+        if any_parent_active == False:
+            self.time_delayed = 0
 
     def can_connect_to(self):
         return []
@@ -135,7 +140,7 @@ class SensorAtom(Atom):
     The base class for a sensor atom
     """
     def __init__(self,memory=None,messages=None,message_delays=None,
-                 sensors=None,sensory_conditions=None,id=None):
+                 sensors=None,sensory_conditions=None,parameters=None,id=None):
         super(SensorAtom, self).__init__(memory=memory,messages=messages,
                                     message_delays=message_delays,id=id
                                     )
@@ -147,7 +152,12 @@ class SensorAtom(Atom):
             sensory_conditions = []
         self.sensor_input = None
         self.type = "sensory"
+        if parameters == None:
+            self.parameters = {}
+        else:
+            self.parameters = parameters
 
+    @_check_active_timer
     def act(self):
         self.times_tested = self.times_tested+1
         self.get_sensor_input()
@@ -165,7 +175,7 @@ class SensorAtom(Atom):
         pass
 
     def can_connect_to(self):
-        return ["sensory"]
+        return ["sensory","motor","transform"]
 
     def to_json(self):
         Atom.to_json(self)
@@ -188,10 +198,7 @@ class TransformAtom(Atom):
     @_check_active_timer
     def act(self):
         self.time_active += 1
-        inp = []
-        output = []
-        for m in self.messages:
-            inp.append(self.memory.get_message(m,'output'))
+        inp = self.get_input()
         output = inp
         self.send_message("output",inp)
 
@@ -242,10 +249,14 @@ class LinearTransformAtom(TransformAtom):
             for j in range(0,5):
                 self.t_matrix[i] += [0]
         self.init_t_matrix()
+        self.parameters = parameters
 
     @_check_active_timer
     def act(self):
-        input = self.get_input()
+        self.time_active += 1
+        inp = self.get_input()
+        output = self.get_output(inp,5)
+        self.send_message("output",output)
 
 
     def init_t_matrix(self):
@@ -273,13 +284,17 @@ class LinearTransformAtom(TransformAtom):
         takes an input vector (of max length n)
         and produces an output vector (of max length n)
         """
+        print "get_output: input: ",input
         input_bias = input + [1]
+        print "get_output: input_bias: ",input_bias
         if len_output > self.n:
             len_output = self.n
         output = [0]*len_output
         for column in range(0,len_output):
-            for i,input in enumerate(input_bias):
-                output[column] += self.t_matrix[i][column]*input
+            for i,inp in enumerate(input_bias):
+                output[column] += self.t_matrix[i][column]*inp
+        print "input:",input
+        print "transformed output:",output
         return output
 
     def duplicate(self):
@@ -345,10 +360,11 @@ class NaoSensorAtom(SensorAtom):
     The base class for a Nao specific sensor atom
     """
     def __init__(self,memory=None,messages=None,message_delays=None,
-                 sensors=None,sensory_conditions=None,nao_memory=None,id=None):
+                 sensors=None,sensory_conditions=None,
+                 parameters=None,nao_memory=None,id=None):
         super(NaoSensorAtom, self).__init__(
                                     memory=memory,messages=messages,message_delays=message_delays,
-                                    sensors=sensors,sensory_conditions=sensory_conditions,id=id
+                                    sensors=sensors,sensory_conditions=sensory_conditions,parameters=parameters,id=id
                                     )
         self.nao_memory = nao_memory
     def get_sensor_input(self):
@@ -391,8 +407,9 @@ class NaoMotorAtom(MotorAtom):
         self.nao_motion = nao_motion
         self.use_input = use_input
 
-    def send_motors_message(self,motors,angles):
+    def send_motors_message(self,motors,input,angles):
         self.send_message("motors",motors)
+        self.send_message("output",input)
         self.send_message("angles",angles)
 
     @_check_active_timer
@@ -411,7 +428,7 @@ class NaoMotorAtom(MotorAtom):
             safe_angles.append(self.get_safe_angles(name,angles[index]))
         self.nao_motion.motion.setAngles(names,safe_angles,1)
         # print "moving:\nnames:{0}\nangles:{1}".format(names,angles)
-        self.send_motors_message(self.motors,angles)
+        self.send_motors_message(self.motors,angles,safe_angles)
 
     def get_safe_angles(self,name,angle):
         limits = self.nao_motion.motion.getLimits(name)
@@ -503,7 +520,9 @@ class NaoMaxSensorGame(GameAtom):
         output = []
         for m in self.messages:
             inp.append(self.memory.get_message(m,'output'))
-        self.state += inp
+        print "game_inp:",inp
+        self.state.append(inp)
+        print "game_state:",self.state
 
     def get_fitness(self):
         fitness = 0

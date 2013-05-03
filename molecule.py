@@ -148,9 +148,10 @@ class Molecule(object):
         self.set_connections()
 
     def remove_random_atom(self):
-        atom = random.choice(self.molecular_graph.nodes())
-        # print "deleting:",atom
-        self.remove_atom(atom)
+        if len(self.molecular_graph.nodes()) > 1:
+            atom = random.choice(self.molecular_graph.nodes())
+            # print "deleting:",atom
+            self.remove_atom(atom)
 
     def find_atoms_of_types(self,graph,types):
         nodes = []
@@ -333,11 +334,14 @@ class NAOActorMolecule(ActorMolecule):
         self.id = id
     def constructor(self):
         atom_1 = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[143],
+            sensors=[self.nao_memory.getRandomSensor()],
             sensory_conditions=[-10.0],
             messages=[],
-            message_delays=[0])
-        atom_2 = TransformAtom(memory=self.memory,messages=[],message_delays=[2],
+            message_delays=[0],
+            parameters = {
+            "time_active":random.randint(0,100),
+            })
+        atom_2 = LinearTransformAtom(memory=self.memory,messages=[],message_delays=[2],
             parameters = {
             "time_active":random.randint(0,100),
             })
@@ -415,9 +419,18 @@ class NAOActorMolecule(ActorMolecule):
             atom.mutate()
         if random.random() < 0.05:
             self.create_and_add_atom()
-        # if random.random() < 0.05:
-        #     self.delete_atom_mutation()
-        self.set_connections()
+        if random.random() < 0.01:
+            self.create_and_add_stm_group()
+            self.set_connections()
+        if random.random() < 0.05:
+            self.add_random_edge()
+            self.set_connections()
+        if random.random() < 0.05:
+            self.remove_random_edge()
+            self.set_connections()
+        if random.random() < 0.05:
+            self.remove_random_atom()
+            self.set_connections()
 
     def create_random_motor_atom(self):
         no_motors = random.choice([1,2,3,4])
@@ -474,8 +487,8 @@ class NAOActorMolecule(ActorMolecule):
 
     def create_random_sensor_atom(self):
         atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            # sensors=[self.nao_memory.getRandomSensor()],
-            sensors=[random.choice([141,142])],
+            sensors=[self.nao_memory.getRandomSensor()],
+            # sensors=[random.choice([141,142,143])],
             sensory_conditions=[-10.0],
             messages=[],
             message_delays=[5],

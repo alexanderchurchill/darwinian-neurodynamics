@@ -107,7 +107,7 @@ class Atom(object):
     def conditional_activate(self):
         any_parent_active = False
         activated = False
-        print "conditionally_activate: {0} {1}".format(self.get_id(),self.type)
+        # print "conditionally_activate: {0} {1}".format(self.get_id(),self.type)
         if self.messages is not None:
             for index, atom_id in enumerate(self.messages):
                 if self.memory.get_message(atom_id,"active"):
@@ -189,7 +189,7 @@ class SensorAtom(Atom):
             and len(self.messages) > 0
             ):
             self.deactivate()
-            print "deactivating: ",self.get_id()
+            # print "deactivating: ",self.get_id()
             self.active = False
             self.time_delayed = 0
             self.time_active = 0
@@ -520,23 +520,6 @@ class NaoMotorAtom(MotorAtom):
             if random.random() < mutation_rate:
                 angle = 0.5*(random.random()-0.5) + angle
             self.parameters["motor_parameters"][i] = angle
-
-    def mutate_delays(self,mutation_rate):
-        if random.random() < mutation_rate:
-            self.parameters["time_active"] += random.randint(-2,2)
-        if self.parameters["time_active"] < 1:
-            self.parameters["time_active"] = 1
-        elif self.parameters["time_active"] > 100:
-            self.parameters["time_active"] = 100
-
-        for i,delay in enumerate(self.message_delays):
-            if random.random() < mutation_rate:
-                self.message_delays[i]+= random.randint(-2,2)
-                if self.message_delays[i] < 1:
-                    self.message_delays[i] = 1
-                elif self.message_delays[i] > 90:
-                    self.message_delays[i] = 90
-
 
     def mutate(self):
         self.mutate_delays(0.05)

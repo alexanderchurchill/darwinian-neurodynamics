@@ -37,10 +37,19 @@ class Molecule(object):
         pass
 
     def conditional_activate(self):
-        """
-        previous: conditionalActivate
-        """
-        pass
+        just_activated = []
+        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
+            if atom.conditional_activate():
+                just_activated.append(atom.get_id())
+        while len(just_activated) > 0:
+            atom_id = just_activated.pop(0)
+            for successor_id in self.molecular_graph.successors(atom_id):
+                atom = self.get_atom(successor_id)
+                if atom.time_delayed == 0:
+                    # print "start timers:",atom.get_id()
+                    if atom.conditional_activate():
+                        just_activated.append(atom.get_id())
+
     def set_connections(self):
         """
         takes graph connections between nodes and
@@ -106,33 +115,42 @@ class Molecule(object):
         while parent == child or child in self.molecular_graph.successors(parent):
             child = random.choice(self.molecular_graph.nodes())
         self.add_edge(parent,child)
+        print "adding edge from {0} to {1}".format(parent,child)
 
     def remove_random_edge(self):
         atom = random.choice(self.molecular_graph.nodes())
         ins = self.molecular_graph.predecessors(atom)
         outs = self.molecular_graph.successors(atom)
-        while (len(ins) == 0 and len(outs) == 0):
+        count = 0
+        while (len(ins) == 0 and len(outs) == 0) and count < 150:
             atom = random.choice(self.molecular_graph.nodes())
             ins = self.molecular_graph.predecessors(atom)
             outs = self.molecular_graph.successors(atom)
+            # maybe the graph is very disconnected?
+            count += 1
         if len(ins) > 0 and len(outs) > 0:
             remove_type = random.choice(["ins","outs"])
         elif len(ins) > 0:
-            remove_type = ["ins"]
+            remove_type = "ins"
         else:
-            remove_type = ["outs"]
+            remove_type = "outs"
         if remove_type == "ins":
-            self.molecular_graph.remove_edge(random.choice(ins),atom)
+            ch = random.choice(ins)
+            self.molecular_graph.remove_edge(ch,atom)
+            print "removing edge {0} from {1}".format(ch,atom)
         else:
-            self.molecular_graph.remove_edge(random.choice(outs),atom)
+            ch = random.choice(outs)
+            self.molecular_graph.remove_edge(atom,ch)
+            print "removing edge {0} from {1}".format(atom,ch)
 
     def remove_atom(self,atom_id):
-        self.molecular_graph.remove_node(node)
+        self.molecular_graph.remove_node(atom_id)
         self.set_connections()
 
     def remove_random_atom(self):
         atom = random.choice(self.molecular_graph.nodes())
-        self.delete_atom(atom)
+        # print "deleting:",atom
+        self.remove_atom(atom)
 
     def find_atoms_of_types(self,graph,types):
         nodes = []
@@ -191,15 +209,13 @@ class GameMolecule(Molecule):
                 if atom.active:
                     self.active = True
                     self.active_hist = True
-
+        if self.active:
+            self.conditional_activate()
     def act(self):
         self.times_tested += 1
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is True]:
             if atom.active is True:
                 atom.act()
-    def conditional_activate(self):
-        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
-            atom.conditional_activate()
 
     def get_fitness(self):
         fitness = -999999
@@ -233,21 +249,24 @@ class ActorMolecule(Molecule):
         """
         self.times_tested += 1
         for atom in self.get_atoms_as_list():
-            if atom.type == "sensory":
+            if atom.type == "sensory" and len(atom.messages) == 0:
                 atom.activate()
                 # check to see if sensory conditions have been met
                 if atom.active:
                     self.active = True
                     self.active_hist = True
+        if self.active:
+            self.conditional_activate()
 
-    def conditional_activate(self):
-        for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
-            atom.conditional_activate()
+    # def conditional_activate(self):
+    #     for atom in [atom for atom in self.get_atoms_as_list() if atom.active is False]:
+    #         atom.conditional_activate()
 
     def act(self):
         self.times_tested += 1
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is True]:
             if atom.active is True:
+                print "atom acting:",atom.get_id()
                 atom.act()
 
 ######################
@@ -277,12 +296,12 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             parameters = {
             "time_active":"always",
             })
-        atom_2 = TransformAtom(memory=self.memory,messages=[],message_delays=[0],
+        atom_2 = TransformAtom(memory=self.memory,messages=[],message_delays=[1],
             parameters = {
             "time_active":"always",
             })
         atom_3 = NaoMaxSensorGame(
-            memory=self.memory,messages=[],message_delays=[0]
+            memory=self.memory,messages=[],message_delays=[1]
             )
         # add atom to shared list of atoms
         for a in [atom_1,atom_2,atom_3]:
@@ -395,9 +414,9 @@ class NAOActorMolecule(ActorMolecule):
         for atom in self.get_atoms_as_list():
             atom.mutate()
         if random.random() < 0.05:
-            self.create_and_add_motor_atom()
-        if random.random() < 0.05:
-            self.delete_atom_mutation()
+            self.create_and_add_atom()
+        # if random.random() < 0.05:
+        #     self.delete_atom_mutation()
         self.set_connections()
 
     def create_random_motor_atom(self):
@@ -418,18 +437,23 @@ class NAOActorMolecule(ActorMolecule):
 
     def create_and_add_atom(self,a_type=None):
         if a_type is None:
-            a_type.random.choice(a_type)
+            a_type = random.choice(["motor","sensory","transform"])
         if a_type == "motor":
+            print "adding motor atom"
             atom = self.create_random_motor_atom()
         elif a_type == "sensory":
+            print "adding sensory atom"
             atom = self.create_random_sensor_atom()
         elif a_type == "transform":
-            atom = self.create_random_sensor_atom()
+            print "adding transform atom"
+            atom = self.create_random_transform_atom()
         connecting_atom = random.choice(self.molecular_graph.nodes())
         if random.random() < 0.5:
             self.add_atom_from(atom.get_id(),connecting_atom)
-        if random.random() < 0.5:
+            print "adding from"
+        else:
             self.add_atom_to(atom.get_id(),connecting_atom)
+            print "adding to"
         self.set_connections()
 
 
@@ -456,7 +480,7 @@ class NAOActorMolecule(ActorMolecule):
             messages=[],
             message_delays=[5],
             parameters={
-            "time_active":"always"
+            "time_active":100
             })
         self.memory.add_atom(atom)
         return atom

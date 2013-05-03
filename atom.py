@@ -14,6 +14,7 @@ def _check_active_timer(f):
     the should still be active
     """
     def wrapped(self,*args):
+        self.time_active += 1
         if (self.parameters["time_active"] is not "always"
             and self.time_active >= self.parameters["time_active"]
             ):
@@ -105,18 +106,41 @@ class Atom(object):
 
     def conditional_activate(self):
         any_parent_active = False
+        activated = False
+        print "conditionally_activate: {0} {1}".format(self.get_id(),self.type)
         if self.messages is not None:
             for index, atom_id in enumerate(self.messages):
                 if self.memory.get_message(atom_id,"active"):
                     if self.active is False:
-                        if self.time_delayed >= self.message_delays[index]:
+                        if self.time_delayed >= self.message_delays[0]:
                             self.activate()
+                            activated = True
                         #Incremement timer
                         self.time_delayed += 1
-        if self.time_delayed > 0:
-            self.time_delayed += 1
+                        return activated
+            if self.time_delayed > 0:
+                if self.time_delayed >= self.message_delays[0]:
+                    self.activate()
+                self.time_delayed += 1
+            return activated
         # if any_parent_active == False:
         #     self.time_delayed = 0
+
+    def mutate_delays(self,mutation_rate):
+        if random.random() < mutation_rate:
+            self.parameters["time_active"] += random.randint(-2,2)
+        if self.parameters["time_active"] < 1:
+            self.parameters["time_active"] = 1
+        elif self.parameters["time_active"] > 100:
+            self.parameters["time_active"] = 100
+
+        for i,delay in enumerate(self.message_delays):
+            if random.random() < mutation_rate:
+                self.message_delays[i]+= random.randint(-2,2)
+                if self.message_delays[i] < 1:
+                    self.message_delays[i] = 1
+                elif self.message_delays[i] > 90:
+                    self.message_delays[i] = 90
 
     def can_connect_to(self):
         return []
@@ -158,9 +182,18 @@ class SensorAtom(Atom):
         else:
             self.parameters = parameters
 
-    @_check_active_timer
     def act(self):
-        self.times_tested = self.times_tested+1
+        self.time_active += 1
+        if (self.parameters["time_active"] is not "always"
+            and self.time_active >= self.parameters["time_active"]
+            and len(self.messages) > 0
+            ):
+            self.deactivate()
+            print "deactivating: ",self.get_id()
+            self.active = False
+            self.time_delayed = 0
+            self.time_active = 0
+        self.times_tested = self.times_tested + 1
         self.get_sensor_input()
         self.send_message("output",[sensor for sensor in self.sensor_input])
 
@@ -172,6 +205,13 @@ class SensorAtom(Atom):
                 conditions_met = False
         if conditions_met:
             Atom.activate(self)
+
+    def mutate(self):
+        self.mutate_delays(0.05)
+        self.mutate_sensors(0.05)
+
+    def mutate_sensors(self):
+        pass
     def get_sensor_input(self):
         pass
 
@@ -198,7 +238,6 @@ class TransformAtom(Atom):
 
     @_check_active_timer
     def act(self):
-        self.time_active += 1
         inp = self.get_input()
         output = inp
         self.send_message("output",inp)
@@ -210,7 +249,9 @@ class TransformAtom(Atom):
         """
         inp = []
         for m in self.messages:
-            inp+=self.memory.get_message(m,'output')
+            in_message = self.memory.get_message(m,'output')
+            if in_message is not None:
+                inp += in_message
         return inp
 
     def duplicate(self):
@@ -254,7 +295,6 @@ class LinearTransformAtom(TransformAtom):
 
     @_check_active_timer
     def act(self):
-        self.time_active += 1
         inp = self.get_input()
         output = self.get_output(inp,5)
         self.send_message("output",output)
@@ -263,7 +303,7 @@ class LinearTransformAtom(TransformAtom):
     def init_t_matrix(self):
         for m,row in enumerate(self.t_matrix):
             for n,cell in enumerate(row):
-                self.t_matrix[m][n]=random.gauss(0,1)
+                self.t_matrix[m][n]=random.gauss(0,0.3)
                 if self.t_matrix[m][n] > 1:
                     self.t_matrix[m][n] = 1
                 elif self.t_matrix[m][n] < -1:
@@ -280,22 +320,35 @@ class LinearTransformAtom(TransformAtom):
     def set_t_matrix(self):
         self.t_matrix = t_matrix
 
+    def mutate_t_matrix(self,mutation_rate):
+        for m,row in enumerate(self.t_matrix):
+            for n,cell in enumerate(row):
+                if random.random() < mutation_rate:
+                    self.t_matrix[m][n]+=random.gauss(0,0.1)
+                    if self.t_matrix[m][n] > 1:
+                        self.t_matrix[m][n] = 1
+                    elif self.t_matrix[m][n] < -1:
+                        self.t_matrix[m][n] = -1
+    def mutate(self):
+        self.mutate_delays(0.05)
+        self.mutate_t_matrix(0.05)
+
     def get_output(self,input,len_output):
         """
         takes an input vector (of max length n)
         and produces an output vector (of max length n)
         """
-        print "get_output: input: ",input
-        input_bias = input + [1]
-        print "get_output: input_bias: ",input_bias
+        # print "get_output: input: ",input
+        input_bias = input[0:self.n] + [1]
+        # print "get_output: input_bias: ",input_bias
         if len_output > self.n:
             len_output = self.n
         output = [0]*len_output
         for column in range(0,len_output):
             for i,inp in enumerate(input_bias):
                 output[column] += self.t_matrix[i][column]*inp
-        print "input:",input
-        print "transformed output:",output
+        # print "input:",input
+        # print "transformed output:",output
         return output
 
     def duplicate(self):
@@ -383,6 +436,17 @@ class NaoSensorAtom(SensorAtom):
                                 )
         return new_atom
 
+    def get_unique_rand_sensor(self):
+        sensor = self.nao_memory.getRandomSensor()
+        while sensor in self.sensors:
+            sensor = self.nao_memory.getRandomSensor()
+        return sensor
+
+    def mutate_sensors(self,mutation_rate):
+        for i,s in enumerate(self.sensors):
+            if random.random() < mutation_rate:
+                self.sensors[i] = self.get_unique_rand_sensor()
+
     def print_atom(self):
         output = ""
         output += "id: {0}\n".format(self.get_id())
@@ -391,6 +455,8 @@ class NaoSensorAtom(SensorAtom):
         output += "sensory_conditions: {0}\n".format(self.sensory_conditions)
         output += "messages: {0}\n".format(self.messages)
         output += "message_delays: {0}\n".format(self.message_delays)
+        output += "time_active: {0}\n".format(self.time_active)
+        output += "time_delayed: {0}\n".format(self.time_delayed)
         return output
 
 class NaoMotorAtom(MotorAtom):
@@ -421,6 +487,8 @@ class NaoMotorAtom(MotorAtom):
         if self.use_input:
             # here we are using input from another atom, e.g. transfer atom
             angles = self.get_input()
+            while len(angles) < len(self.motors):
+                angles.append(self.parameters["motor_parameters"][len(angles)]) 
         else:
             angles = self.parameters["motor_parameters"]
         for index, i in enumerate(self.motors):
@@ -464,6 +532,11 @@ class NaoMotorAtom(MotorAtom):
         for i,delay in enumerate(self.message_delays):
             if random.random() < mutation_rate:
                 self.message_delays[i]+= random.randint(-2,2)
+                if self.message_delays[i] < 1:
+                    self.message_delays[i] = 1
+                elif self.message_delays[i] > 90:
+                    self.message_delays[i] = 90
+
 
     def mutate(self):
         self.mutate_delays(0.05)
@@ -483,7 +556,9 @@ class NaoMotorAtom(MotorAtom):
         """
         inp = []
         for m in self.messages:
-            inp+=self.memory.get_message(m,'output')
+            in_message = self.memory.get_message(m,'output')
+            if in_message is not None:
+                inp += in_message
         return inp
 
 
@@ -521,9 +596,9 @@ class NaoMaxSensorGame(GameAtom):
         output = []
         for m in self.messages:
             inp.append(self.memory.get_message(m,'output'))
-        print "game_inp:",inp
+        # print "game_inp:",inp
         self.state.append(inp)
-        print "game_state:",self.state
+        # print "game_state:",self.state
 
     def get_fitness(self):
         fitness = 0

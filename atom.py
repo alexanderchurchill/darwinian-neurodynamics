@@ -230,7 +230,7 @@ class TransformAtom(Atom):
         return output
 
     def can_connect_to(self):
-        return ["sensory"]
+        return ["sensory","motor","transform"]
 
     def to_json(self):
         Atom.to_json(self)
@@ -327,7 +327,7 @@ class MotorAtom(Atom):
         pass
 
     def can_connect_to(self):
-        return ["transform","motor"]
+        return ["sensory","motor","transform"]
 
     def to_json(self):
         Atom.to_json(self)

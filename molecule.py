@@ -67,9 +67,6 @@ class Molecule(object):
     def mutate(self):
         pass
 
-    def add_atom(self):
-        pass
-
     def delete_atom(self):
         pass
 
@@ -81,6 +78,16 @@ class Molecule(object):
             return True
         else:
             return False
+    def add_atom(self,atom_id):
+        self.molecular_graph.add_node(atom_id)
+
+    def add_atom_to(self,atom_id,child):
+        self.add_atom(atom_id)
+        self.molecular_graph.add_edge(atom_id,child)
+
+    def add_atom_from(self,atom_id,parent):
+        self.add_atom(atom_id)
+        self.add_edge(parent,atom_id)
 
     def add_edge(self,from_atom_id,to_atom_id):
         if self.can_connect_atoms(from_atom_id,to_atom_id):
@@ -94,12 +101,38 @@ class Molecule(object):
         self.add_edge(parent,atom_id)
 
     def add_random_edge(self):
-        atom = random.choice(self.molecular_graph.nodes())
-        self.choose_and_add_edge(atom)
+        child = random.choice(self.molecular_graph.nodes())
+        parent = random.choice(self.molecular_graph.nodes())
+        while parent == child or child in self.molecular_graph.successors(parent):
+            child = random.choice(self.molecular_graph.nodes())
+        self.add_edge(parent,child)
 
     def remove_random_edge(self):
         atom = random.choice(self.molecular_graph.nodes())
-        self.choose_and_add_edge(atom)
+        ins = self.molecular_graph.predecessors(atom)
+        outs = self.molecular_graph.successors(atom)
+        while (len(ins) == 0 and len(outs) == 0):
+            atom = random.choice(self.molecular_graph.nodes())
+            ins = self.molecular_graph.predecessors(atom)
+            outs = self.molecular_graph.successors(atom)
+        if len(ins) > 0 and len(outs) > 0:
+            remove_type = random.choice(["ins","outs"])
+        elif len(ins) > 0:
+            remove_type = ["ins"]
+        else:
+            remove_type = ["outs"]
+        if remove_type == "ins":
+            self.molecular_graph.remove_edge(random.choice(ins),atom)
+        else:
+            self.molecular_graph.remove_edge(random.choice(outs),atom)
+
+    def remove_atom(self,atom_id):
+        self.molecular_graph.remove_node(node)
+        self.set_connections()
+
+    def remove_random_atom(self):
+        atom = random.choice(self.molecular_graph.nodes())
+        self.delete_atom(atom)
 
     def find_atoms_of_types(self,graph,types):
         nodes = []
@@ -458,41 +491,6 @@ class NAOActorMolecule(ActorMolecule):
         self.add_edge(sensor.get_id(),transform.get_id())
         self.add_edge(transform.get_id(),motor.get_id())
         self.add_atom_from(sensor.get_id(),parent=parent)
-
-    def add_atom(self,atom_id):
-        self.molecular_graph.add_node(atom_id)
-
-    def add_atom_to(self,atom_id,child=None,):
-        if child != None:
-            self.add_atom(atom_id)
-            self.molecular_graph.add_edge(atom_id,child)
-
-    def add_atom_from(self,atom_id,parent=None,):
-        if parent != None:
-            self.add_atom(atom_id)
-            self.add_edge(parent,atom_id)
-
-    def delete_atom(self,atom_id):
-        delete_list = [atom_id]
-        atom = self.get_atom(atom_id)
-        successors = self.molecular_graph.successors(atom_id)
-        open_list = successors
-        while len(open_list) > 0:
-            node = open_list.pop(0)
-            open_list += [s for s in self.molecular_graph.successors(node) if s not in open_list]
-            to_delete = True
-            for n in self.molecular_graph.predecessors(node):
-                if n not in delete_list:
-                    to_delete = False
-            if to_delete:
-                delete_list.append(node)
-        for node in delete_list:
-            self.molecular_graph.remove_node(node)
-
-    def delete_atom_mutation(self):
-        atoms = self.find_atoms_of_types(self.molecular_graph,'motor')
-        deleting = random.choice(atoms)
-        self.delete_atom(deleting)
 
     def crossover(self,other_molecule):
         self.single_point_crossover(other_molecule)

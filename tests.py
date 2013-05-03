@@ -84,10 +84,10 @@ def save_population(g,population):
             graph.get_node(n).attr['color'] = graph_colours[memory.atoms[n].type]
         graph.layout()
         graph.draw('populations/{0}/{1}.png'.format(g,i))
-        json_output = p.get_json()
-        file = open('populations/{0}/{1}.json'.format(g,i),'w')
-        file.write(str(json_output))
-        file.close()
+        # json_output = p.get_json()
+        # file = open('populations/{0}/{1}.json'.format(g,i),'w')
+        # file.write(str(json_output))
+        # file.close()
 
 def load_molecule(json,memory,atoms,nao_memory,nao_motion):
     molecule = NAOActorMolecule(memory,atoms,nao_memory,nao_motion,duplication=True)

@@ -317,7 +317,7 @@ class LinearTransformAtom(TransformAtom):
     def get_t_matrix(self):
         return self.t_matrix
 
-    def set_t_matrix(self):
+    def set_t_matrix(self,t_matrix):
         self.t_matrix = t_matrix
 
     def mutate_t_matrix(self,mutation_rate):
@@ -355,9 +355,9 @@ class LinearTransformAtom(TransformAtom):
         new_atom = LinearTransformAtom(memory=self.memory,
                                 messages=[],
                                 message_delays=copy.deepcopy(self.message_delays),
-                                parameters=copy.deepcopy(self.parameters),
+                                parameters=copy.deepcopy(self.parameters)
                                 )
-        new_atom.set_t_matrix(copy.deepcopy(self.get_t_matrix))
+        new_atom.set_t_matrix(copy.deepcopy(self.get_t_matrix()))
         return new_atom
 
 
@@ -432,7 +432,8 @@ class NaoSensorAtom(SensorAtom):
                                 message_delays=copy.deepcopy(self.message_delays),
                                 sensors=copy.deepcopy(self.sensors),
                                 sensory_conditions=copy.deepcopy(self.sensory_conditions),
-                                nao_memory=self.nao_memory
+                                nao_memory=self.nao_memory,
+                                parameters=self.parameters
                                 )
         return new_atom
 

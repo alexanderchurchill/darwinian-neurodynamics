@@ -267,7 +267,6 @@ class ActorMolecule(Molecule):
         self.times_tested += 1
         for atom in [atom for atom in self.get_atoms_as_list() if atom.active is True]:
             if atom.active is True:
-                print "atom acting:",atom.get_id()
                 atom.act()
 
 ######################
@@ -359,7 +358,8 @@ class NAOActorMolecule(ActorMolecule):
             2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
-            })
+            },
+            use_input=True)
 
         atom_4 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
@@ -374,7 +374,8 @@ class NAOActorMolecule(ActorMolecule):
             2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
-            })
+            },
+            use_input=True)
         atom_5 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
@@ -388,7 +389,8 @@ class NAOActorMolecule(ActorMolecule):
             2*(random.random()-0.5)
             ],
             "times":[1, 1, 1]
-            })
+            },
+            use_input=True)
         for a in [atom_1,atom_2,atom_3,atom_4,atom_5]:
             self.atoms[a.get_id()]=a
         self.molecular_graph = nx.DiGraph()

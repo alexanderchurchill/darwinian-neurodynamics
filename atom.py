@@ -50,9 +50,6 @@ class Atom(object):
             self.id = id
         self.type = "base"
         self.json = {}
-        # register atom:
-        self.add_atom_to_memory()
-        self.send_deactivate_message()
 
     def act(self):
         pass
@@ -84,12 +81,17 @@ class Atom(object):
         """
         self.send_message("active",False)
 
-    def create_id(self):
-        id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
-        while id in self.memory.atoms:
+    def create_id(self,count=None):
+        if count == None:
             id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
+            while id in self.memory.atoms:
+                id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
+        else:
+            id = "a-{0}".format(count)
         return id
 
+    def set_id(self,id):
+        self.id = id
     def get_id(self):
         return self.id
 
@@ -103,6 +105,10 @@ class Atom(object):
     def activate(self):
         self.active = True
         self.send_active_message()
+
+    def register_atom(self):
+        self.add_atom_to_memory()
+        self.send_deactivate_message()
 
     def conditional_activate(self):
         any_parent_active = False
@@ -139,8 +145,8 @@ class Atom(object):
                 self.message_delays[i]+= random.randint(-2,2)
                 if self.message_delays[i] < 1:
                     self.message_delays[i] = 1
-                elif self.message_delays[i] > 90:
-                    self.message_delays[i] = 90
+                elif self.message_delays[i] > 100:
+                    self.message_delays[i] = 100
 
     def can_connect_to(self):
         return []
@@ -220,7 +226,7 @@ class SensorAtom(Atom):
 
     def to_json(self):
         Atom.to_json(self)
-        for variable in ["sensors","sensory_conditions"]:
+        for variable in ["sensors","sensory_conditions","parameters"]:
             self.json[variable] = self.__getattribute__(variable)
 
 
@@ -248,7 +254,7 @@ class TransformAtom(Atom):
         connected to this one
         """
         inp = []
-        for m in self.messages:
+        for m in sorted(self.messages):
             in_message = self.memory.get_message(m,'output')
             if in_message is not None:
                 inp += in_message
@@ -360,6 +366,10 @@ class LinearTransformAtom(TransformAtom):
         new_atom.set_t_matrix(copy.deepcopy(self.get_t_matrix()))
         return new_atom
 
+    def to_json(self):
+        TransformAtom.to_json(self)
+        for variable in ["t_matrix"]:
+            self.json[variable] = self.__getattribute__(variable)
 
 
 class MotorAtom(Atom):
@@ -433,7 +443,7 @@ class NaoSensorAtom(SensorAtom):
                                 sensors=copy.deepcopy(self.sensors),
                                 sensory_conditions=copy.deepcopy(self.sensory_conditions),
                                 nao_memory=self.nao_memory,
-                                parameters=self.parameters
+                                parameters=copy.deepcopy(self.parameters)
                                 )
         return new_atom
 
@@ -539,7 +549,7 @@ class NaoMotorAtom(MotorAtom):
         connected to this one
         """
         inp = []
-        for m in self.messages:
+        for m in sorted(self.messages):
             in_message = self.memory.get_message(m,'output')
             if in_message is not None:
                 inp += in_message
@@ -564,9 +574,14 @@ class NaoMotorAtom(MotorAtom):
                                 motors=copy.deepcopy(self.motors),
                                 nao_motion=self.nao_motion,
                                 nao_memory=self.nao_memory,
-                                use_input= self.use_input
+                                use_input= copy.deepcopy(self.use_input)
                                 )
         return new_atom
+
+    def to_json(self):
+        MotorAtom.to_json(self)
+        for variable in ["use_input"]:
+            self.json[variable] = self.__getattribute__(variable)
 
 class NaoMaxSensorGame(GameAtom):
     """A simple NAO game"""

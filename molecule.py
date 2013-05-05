@@ -305,7 +305,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             )
         # add atom to shared list of atoms
         for a in [atom_1,atom_2,atom_3]:
-            self.atoms[a.get_id()] = a
+            self.memory.add_atom(a)
         self.molecular_graph = nx.DiGraph()
         self.molecular_graph.add_node(atom_1.get_id())
         self.molecular_graph.add_node(atom_2.get_id())
@@ -392,7 +392,7 @@ class NAOActorMolecule(ActorMolecule):
             },
             use_input=True)
         for a in [atom_1,atom_2,atom_3,atom_4,atom_5]:
-            self.atoms[a.get_id()]=a
+            self.memory.add_atom(a)
         self.molecular_graph = nx.DiGraph()
         self.molecular_graph.add_node(atom_1.get_id(),color=graph_colours[atom_1.type])
         self.molecular_graph.add_node(atom_2.get_id(),color=graph_colours[atom_2.type])
@@ -471,22 +471,6 @@ class NAOActorMolecule(ActorMolecule):
             print "adding to"
         self.set_connections()
 
-
-    #deprecated
-    def create_and_add_motor_atom(self):
-        atom = self.create_random_motor_atom()
-        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
-        parent = random.choice(allowed_connectors)
-        self.add_atom_from(atom.get_id(),parent=parent)
-        self.set_connections()
-
-    def create_and_add_sensor_atom(self):
-        atom = self.create_random_sensor_atom()
-        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
-        parent = random.choice(allowed_connectors)
-        self.add_atom_from(atom.get_id(),parent=parent)
-        self.set_connections()
-
     def create_random_sensor_atom(self):
         atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
             sensors=[self.nao_memory.getRandomSensor()],
@@ -499,13 +483,6 @@ class NAOActorMolecule(ActorMolecule):
             })
         self.memory.add_atom(atom)
         return atom
-
-    def create_and_add_transform_atom(self):
-        atom = self.create_random_transform_atom()
-        allowed_connectors = self.find_atoms_of_types(self.molecular_graph,atom.can_connect_to())
-        parent = random.choice(allowed_connectors)
-        self.add_atom_from(atom.get_id(),parent=parent)
-        self.set_connections()
 
     def create_random_transform_atom(self):
         atom = LinearTransformAtom(memory=self.memory,
@@ -578,7 +555,7 @@ class NAOActorMolecule(ActorMolecule):
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
             new_atom = self.atoms[node].duplicate()
-            self.atoms[new_atom.get_id()]=new_atom
+            self.memory.add_atom(new_atom)
             graph_dict[node]["child"] = new_atom.get_id()
             new_graph_dict[new_atom.get_id()]={}
             new_graph_dict[new_atom.get_id()]["parent"]=node

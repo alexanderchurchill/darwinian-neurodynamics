@@ -19,6 +19,8 @@ class Messages(object):
         self.message_list = {}
         self.molecules = {}
         self.atoms = {}
+        self.atom_count = 0
+        self.molcule_count = 0
     @_all_strings
     def add_key_to_memory(self,id):
         self.message_list[id]={}
@@ -53,8 +55,17 @@ class Messages(object):
             return self.atoms[id]
         else:
             return None
-    def add_atom(self,atom):
+    def add_atom(self,atom,atom_id = None):
+        if atom_id == None:
+            atom_id = atom.create_id(self.get_atom_count())
+        atom.set_id(atom_id)
         self.atoms[atom.get_id()] = atom
+        atom.register_atom()
+        self.atom_count += 1
+
+    def get_atom_count(self):
+        return self.atom_count
+
 
     @_all_strings
     def delete_molecule(self,id):

@@ -84,10 +84,10 @@ def save_population(g,population):
             graph.get_node(n).attr['color'] = graph_colours[memory.atoms[n].type]
         graph.layout()
         graph.draw('populations/{0}/{1}.png'.format(g,i))
-        # json_output = p.get_json()
-        # file = open('populations/{0}/{1}.json'.format(g,i),'w')
-        # file.write(str(json_output))
-        # file.close()
+        json_output = p.get_json()
+        file = open('populations/{0}/{1}.json'.format(g,i),'w')
+        file.write(str(json_output))
+        file.close()
 
 def load_molecule(json,memory,atoms,nao_memory,nao_motion):
     molecule = NAOActorMolecule(memory,atoms,nao_memory,nao_motion,duplication=True)
@@ -102,6 +102,10 @@ def load_molecule(json,memory,atoms,nao_memory,nao_motion):
                  id = id)
             memory.add_atom(new_atom)
         elif _class == 'TransformAtom':
+            new_atom = TransformAtom(memory=memory,messages=None,message_delays=message_delays,
+                parameters=atom["parameters"],id = id)
+            memory.add_atom(new_atom)
+        elif _class == 'LinearTransformAtom':
             new_atom = TransformAtom(memory=memory,messages=None,message_delays=message_delays,
                 parameters=atom["parameters"],id = id)
             memory.add_atom(new_atom)
@@ -159,7 +163,7 @@ print m
 
 
 population = []
-pop_size = 30
+pop_size = 10
 for i in range(0,pop_size):
     molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
     memory.molecules[molecule.id] = molecule
@@ -183,7 +187,7 @@ print "fitness = ",population[best].fitness
 # raw_input()
 
 
-for g in range(0,pop_size*100):
+for g in range(0,pop_size*2000):
     print "iteration:",g
     ind_1_i = random.randint(0,len(population)-1)
     ind_2_i = random.randint(0,len(population)-1)
@@ -209,14 +213,16 @@ for g in range(0,pop_size*100):
         memory.molecules[ind_2.id]=ind_2
         population[ind_2_i] = ind_2
         ind_2.mutate()
-        assess_fitness(ind_2,gm)
+        # assess_fitness(ind_2,gm)
+        ind_2.fitness = copy.deepcopy(ind_1.fitness)
     else:
         print "ind_2 better"
         ind_1 = ind_2.duplicate()
         memory.molecules[ind_1.id]=ind_1
         population[ind_1_i] = ind_1
         ind_1.mutate()
-        assess_fitness(ind_1,gm)
+        # assess_fitness(ind_1,gm)
+        ind_1.fitness = copy.deepcopy(ind_2.fitness)
     if g%pop_size == 0:
         # plt.ion()
         plot_fitness(population)

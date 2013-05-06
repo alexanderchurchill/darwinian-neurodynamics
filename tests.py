@@ -10,6 +10,7 @@ from memory import Messages
 import networkx as nx
 import pygraphviz as pgv
 from networkx.readwrite import json_graph
+import config
 
 #PYTHON SCRIPT FOR RUNNING DARWINIAN NEURODYNAMICS
 
@@ -54,13 +55,13 @@ def assess_fitness(individual,game):
     sleep(0.5)
     bmf_global.rest()
     sleep(0.5)
-    for t in range(0,300):
+    for t in range(0,config.time_steps_per_evaluation):
         # print "sensor:{0}".format(nao_mem_global.getSensorValue(141))
         individual.act()
         individual.conditional_activate()
         game.act()
         game.conditional_activate()
-        sleep(0.001)
+        sleep(config.time_step_length)
     individual.fitness = game.get_fitness()
     # print "state:",game.get_state_history()
     # raw_input()
@@ -81,7 +82,11 @@ def save_population(g,population):
         file.close()
         graph = nx.to_agraph(p.molecular_graph)
         for n in graph.nodes():
-            graph.get_node(n).attr['color'] = graph_colours[memory.atoms[n].type]
+            graph.get_node(n).attr['color'] = graph_colours[memory.get_atom(n).type]
+            if memory.get_atom(n).type == 'motor':
+                graph.get_node(n).attr['label'] = memory.get_atom(n).motors
+            if memory.get_atom(n).type == 'sensory':
+                graph.get_node(n).attr['label'] = memory.get_atom(n).sensors
         graph.layout()
         graph.draw('populations/{0}/{1}.png'.format(g,i))
         json_output = p.get_json()
@@ -163,8 +168,8 @@ print m
 
 
 population = []
-pop_size = 10
-for i in range(0,pop_size):
+config.pop_size = 10
+for i in range(0,config.pop_size):
     molecule = NAOActorMolecule(memory,atoms,nao_mem_global,bmf_global)
     memory.molecules[molecule.id] = molecule
     population.append(molecule)
@@ -187,7 +192,7 @@ print "fitness = ",population[best].fitness
 # raw_input()
 
 
-for g in range(0,pop_size*2000):
+for g in range(0,config.pop_size*3000):
     print "iteration:",g
     ind_1_i = random.randint(0,len(population)-1)
     ind_2_i = random.randint(0,len(population)-1)
@@ -223,7 +228,7 @@ for g in range(0,pop_size*2000):
         ind_1.mutate()
         # assess_fitness(ind_1,gm)
         ind_1.fitness = copy.deepcopy(ind_2.fitness)
-    if g%pop_size == 0:
+    if g%config.pop_size == 0:
         # plt.ion()
         plot_fitness(population)
         plt.show()
@@ -251,13 +256,13 @@ bmf_global.rest()
 sleep(1)
 population[best].activate()
 gm.activate()
-for t in range(0,300):
+for t in range(0,config.time_steps_per_evaluation):
     print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
     population[best].act()
     population[best].conditional_activate()
     gm.act()
     gm.conditional_activate()
-    sleep(0.001)
+    sleep(config.time_step_length)
 
 # print gm.get_state_history()
 print gm.get_fitness()

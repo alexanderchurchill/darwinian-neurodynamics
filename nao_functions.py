@@ -277,7 +277,7 @@ class NaoMemory(ALModule):
                    188: "PositionCamera"} #,
  #                  188: "WordRecognized"}
 
-    
+    self.allowed_sensors = [i for i in range(58,84)] + [i for i in range(138,145)]
     bodyNames = self.motion.getBodyNames("Body")
     self.numToMotor = {}
     j = 1
@@ -316,7 +316,7 @@ class NaoMemory(ALModule):
       return random.randint(0,25)
 
   def getRandomSensor(self):
-      return random.randint(1,187)
+      return random.choice(self.allowed_sensors)
       
   def putMemory(self, ident, value):
       self.memory.insertData(str(ident), value)

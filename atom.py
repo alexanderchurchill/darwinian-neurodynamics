@@ -3,6 +3,7 @@ Everything related to an atom is in here
 """
 
 import random,copy,string
+import config
 
 ######################
 # decorators
@@ -213,8 +214,8 @@ class SensorAtom(Atom):
             Atom.activate(self)
 
     def mutate(self):
-        self.mutate_delays(0.05)
-        self.mutate_sensors(0.05)
+        self.mutate_delays(config.mutation_rate)
+        self.mutate_sensors(config.mutation_rate)
 
     def mutate_sensors(self):
         pass
@@ -336,8 +337,8 @@ class LinearTransformAtom(TransformAtom):
                     elif self.t_matrix[m][n] < -1:
                         self.t_matrix[m][n] = -1
     def mutate(self):
-        self.mutate_delays(0.05)
-        self.mutate_t_matrix(0.05)
+        self.mutate_delays(config.mutation_rate)
+        self.mutate_t_matrix(config.mutation_rate)
 
     def get_output(self,input,len_output):
         """
@@ -533,9 +534,9 @@ class NaoMotorAtom(MotorAtom):
             self.parameters["motor_parameters"][i] = angle
 
     def mutate(self):
-        self.mutate_delays(0.05)
-        self.mutate_motors(0.05)
-        self.mutate_angles(0.05)
+        self.mutate_delays(config.mutation_rate)
+        self.mutate_motors(config.mutation_rate)
+        self.mutate_angles(config.mutation_rate)
 
     def get_unique_rand_motor(self):
         motor = self.nao_memory.getRandomMotor()

@@ -7,6 +7,7 @@ import networkx as nx
 import pygraphviz as pgv
 import matplotlib.pyplot as plt
 from networkx.readwrite import json_graph
+import config
 
 graph_colours = {
         "motor":"red",
@@ -68,6 +69,58 @@ class Molecule(object):
 
     def get_atom(self,id):
         return self.memory.get_atom(id)
+
+    def get_connected_components(self,graph):
+        ug = graph.to_undirected()
+        connected_comps = nx.connected_components(ug)
+        return connected_comps
+
+    def get_rand_connected_component(self,connected_components):
+        return random.choice(connected_components)
+
+    def duplicate_connected_component_and_add_to_graph(self,parent_graph,connected_component,graph):
+        connected_graph_dict = {}
+        original_graph_dict = {}
+        # duplicate graph with new atoms
+        for node in connected_component:
+            connected_graph_dict[node]={}
+            connected_graph_dict[node]["predecessors"]=parent_graph.predecessors(node)
+            new_atom = self.get_atom(node).duplicate()
+            self.memory.add_atom(new_atom)
+            connected_graph_dict[node]["child"] = new_atom.get_id()
+            original_graph_dict[new_atom.get_id()]={}
+            original_graph_dict[new_atom.get_id()]["parent"]=node
+            graph.add_node(new_atom.get_id())
+        # add edges
+        for node in original_graph_dict.keys():
+            parent = original_graph_dict[node]["parent"]
+            for p in connected_graph_dict[parent]["predecessors"]:
+                graph.add_edge(connected_graph_dict[p]["child"],node)
+        self.set_connections()
+
+    def crossover_connected_component(self,parent_graph):
+        connected_comp = self.get_rand_connected_component(
+                                    self.get_connected_components(parent_graph))
+        print "connected_comp:",connected_comp
+        self.duplicate_connected_component_and_add_to_graph(
+                                                parent_graph,
+                                                connected_comp,
+                                                self.molecular_graph)
+
+    def crossover(self,parent):
+        if random.random() < config.crossover_rate:
+            self.crossover_connected_component(parent.molecular_graph)
+
+    def remove_connected_component(self,connected_comp):
+        for atom_id in connected_comp:
+            self.remove_atom(atom_id)
+
+    def remove_rand_connected_component(self):
+        connected_comps = self.get_connected_components(self.molecular_graph)
+        if len(connected_comps) > 1:
+            connected_comp = self.get_rand_connected_component(connected_comps)
+            print "connected_comp:",connected_comp
+            self.remove_connected_component(connected_comp)
 
     def deactivate(self):
         self.active = False
@@ -149,9 +202,9 @@ class Molecule(object):
 
     def remove_random_atom(self):
         if len(self.molecular_graph.nodes()) > 1:
-            atom = random.choice(self.molecular_graph.nodes())
-            # print "deleting:",atom
-            self.remove_atom(atom)
+            for atom in self.molecular_graph.nodes():
+                if random.random() < config.mutation_rate:
+                    self.remove_atom(atom)
 
     def find_atoms_of_types(self,graph,types):
         nodes = []
@@ -160,6 +213,20 @@ class Molecule(object):
             if atom.type in types:
                 nodes.append(node)
         return nodes
+
+    def get_random_message_delays(self):
+        return random.randint(config.min_message_delay,config.max_message_delay)
+
+    def get_random_time_active(self):
+        return random.randint(config.min_time_active,config.max_time_active)
+
+    def get_random_motor_length(self):
+        return random.randint(config.min_motors_in_m_atom,
+                            config.max_motors_in_m_atom)
+
+    def get_random_sensor_length(self):
+        return random.randint(config.min_sensors_in_s_atom,
+                            config.max_sensors_in_s_atom)
 
     def print_graph(self,filename):
         graph = nx.to_agraph(self.molecular_graph)
@@ -289,7 +356,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
 
     def constructor(self):
         atom_1 = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[143],
+            sensors=[141],
             sensory_conditions=[-10.0],
             messages=[],
             message_delays=[0],
@@ -327,31 +394,33 @@ class NAOActorMolecule(ActorMolecule):
         if duplication == False:
             self.constructor()
             self.set_connections()
-        id = "m-{0}".format(random.randint(1,5000))
+        id = "m-{0}".format(random.randint(1,50000000))
         while id in self.memory.molecules:
-            id = "m-{0}".format(random.randint(1,5000))
+            id = "m-{0}".format(random.randint(1,50000000))
         self.id = id
     def constructor(self):
         atom_1 = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[self.nao_memory.getRandomSensor()],
-            sensory_conditions=[-10.0],
+            sensors=[self.nao_memory.getRandomSensor(),
+                self.nao_memory.getRandomSensor(),
+                self.nao_memory.getRandomSensor()],
+            sensory_conditions=[-10.0,-10.0,-10.0],
             messages=[],
-            message_delays=[0],
+            message_delays=[self.get_random_message_delays()],
             parameters = {
-            "time_active":random.randint(0,100),
+            "time_active":self.get_random_time_active(),
             })
         atom_2 = LinearTransformAtom(memory=self.memory,messages=[],message_delays=[2],
             parameters = {
-            "time_active":random.randint(0,100),
+            "time_active":self.get_random_time_active(),
             })
 
         atom_3 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[random.randint(0,300)],
+            message_delays=[self.get_random_message_delays()],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,100),
+            "time_active":self.get_random_time_active(),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -364,10 +433,10 @@ class NAOActorMolecule(ActorMolecule):
         atom_4 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[random.randint(0,300)],
+            message_delays=[self.get_random_message_delays()],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,100),
+            "time_active":self.get_random_time_active(),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -379,10 +448,10 @@ class NAOActorMolecule(ActorMolecule):
         atom_5 = NaoMotorAtom(
             memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
             messages=[],
-            message_delays=[random.randint(0,300)],
+            message_delays=[self.get_random_message_delays()],
             motors = self.get_random_motors(self.nao_memory,3),
             parameters = {
-            "time_active":random.randint(0,100),
+            "time_active":self.get_random_time_active(),
             "motor_parameters":[
             2*(random.random()-0.5),
             2*(random.random()-0.5),
@@ -415,34 +484,46 @@ class NAOActorMolecule(ActorMolecule):
             motors.append(motor)
         return motors
 
+    def get_random_sensors(self,nao_memory,n_sensors):
+        sensors = []
+        for i in range(0,n_sensors):
+            sensor = nao_memory.getRandomSensor()
+            while sensor in sensors:
+                sensor = nao_memory.getRandomSensor()
+            sensors.append(sensor)
+        return sensors
+
     def mutate(self):
         # intra atomic mutations
         for atom in self.get_atoms_as_list():
             atom.mutate()
-        if random.random() < 0.05:
+        if random.random() < config.mutation_rate:
             self.create_and_add_atom()
-        if random.random() < 0.01:
+        if random.random() < config.mutation_rate:
             self.create_and_add_stm_group()
             self.set_connections()
-        if random.random() < 0.05:
+        if random.random() < config.mutation_rate:
             self.add_random_edge()
             self.set_connections()
-        if random.random() < 0.05:
+        if random.random() < config.mutation_rate:
             self.remove_random_edge()
             self.set_connections()
-        if random.random() < 0.05:
+        if random.random() < config.mutation_rate:
             self.remove_random_atom()
+            self.set_connections()
+        if random.random() < 0.01:
+            self.remove_rand_connected_component()
             self.set_connections()
 
     def create_random_motor_atom(self):
-        no_motors = random.choice([1,2,3,4])
+        no_motors = self.get_random_motor_length()
         atom = NaoMotorAtom(
                     memory=self.memory,nao_memory=self.nao_memory,nao_motion=self.nao_motion,
                     messages=[],
-                    message_delays=[random.randint(0,5)],
+                    message_delays=[self.get_random_message_delays()],
                     motors = self.get_random_motors(self.nao_memory,no_motors),
                     parameters = {
-                    "time_active":random.randint(5,50),
+                    "time_active":self.get_random_time_active(),
                     "motor_parameters":[2*(random.random()-0.5) for i in range(0,no_motors)],
                     "times":[1, 1, 1]
                     },
@@ -472,14 +553,14 @@ class NAOActorMolecule(ActorMolecule):
         self.set_connections()
 
     def create_random_sensor_atom(self):
+        no_sensors = self.get_random_sensor_length()
         atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
-            sensors=[self.nao_memory.getRandomSensor()],
-            # sensors=[random.choice([141,142,143])],
-            sensory_conditions=[-10.0],
+            sensors=self.get_random_sensors(self.nao_memory,no_sensors),
+            sensory_conditions=[-10000.0 for s in range(0,no_sensors)],
             messages=[],
-            message_delays=[5],
+            message_delays=[self.get_random_message_delays()],
             parameters={
-            "time_active":100
+            "time_active":self.get_random_time_active()
             })
         self.memory.add_atom(atom)
         return atom
@@ -487,10 +568,10 @@ class NAOActorMolecule(ActorMolecule):
     def create_random_transform_atom(self):
         atom = LinearTransformAtom(memory=self.memory,
             messages=[],
-            message_delays=[5],
+            message_delays=[self.get_random_message_delays()],
             n=5,
             parameters={
-            "time_active":50
+            "time_active":self.get_random_time_active()
             }
             )
         self.memory.add_atom(atom)
@@ -554,7 +635,9 @@ class NAOActorMolecule(ActorMolecule):
         for node in self.molecular_graph.nodes():
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
-            new_atom = self.atoms[node].duplicate()
+            # print "duplicating:"
+            # print self.get_atom(node).print_atom()
+            new_atom = self.get_atom(node).duplicate()
             self.memory.add_atom(new_atom)
             graph_dict[node]["child"] = new_atom.get_id()
             new_graph_dict[new_atom.get_id()]={}

@@ -1,9 +1,24 @@
-pop_size = 10
+"""
+All parameters for an evolutionary run
+are stored in here
+"""
+
+#####################
+# GA parameters
+#####################
+pop_size = 2
+mutation_rate = 0.05
+crossover_rate = 0.95
+
+#####################
+# Simulation parameters
+#####################
 time_step_length = 0.001
 time_steps_per_evaluation = 100
 
-mutation_rate = 0.05
-crossover_rate = 0.05
+#####################
+# Atom parameters
+#####################
 
 min_message_delay = 1
 max_message_delay = 10

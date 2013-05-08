@@ -86,7 +86,8 @@ class Atom(object):
         if count == None:
             id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
             while id in self.memory.atoms:
-                id = "a-{0}-{1}".format(random.randint(1,5000),self._rand_char())
+                id = "a-{0}-{1}".format(random.randint(1,5000),
+                                    self._rand_char())
         else:
             id = "a-{0}".format(count)
         return id
@@ -96,11 +97,12 @@ class Atom(object):
     def get_id(self):
         return self.id
 
-    def deactivate(self):
+    def deactivate(self,clear=False):
         self.active = False
         self.time_delayed = 0
         self.time_active = 0
-        # self.memory.clear_all_from_memory(self.id)
+        if clear:
+            self.memory.clear_all_from_memory(self.id)
         self.send_deactivate_message()
 
     def activate(self):
@@ -235,8 +237,10 @@ class TransformAtom(Atom):
     """
     The base class for a sensor atom
     """
-    def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,id=None):
-        super(TransformAtom, self).__init__(memory,messages,message_delays,id=id)
+    def __init__(self,memory=None,messages=None,message_delays=None,
+                    parameters=None,id=None):
+        super(TransformAtom, self).__init__(memory,messages,
+                                        message_delays,id=id)
         self.type = "transform"
         if parameters == None:
             self.parameters = {}
@@ -263,10 +267,10 @@ class TransformAtom(Atom):
 
     def duplicate(self):
         new_atom = TransformAtom(memory=self.memory,
-                                messages=[],
-                                message_delays=copy.deepcopy(self.message_delays),
-                                parameters=copy.deepcopy(self.parameters)
-                                )
+                            messages=[],
+                            message_delays=copy.deepcopy(self.message_delays),
+                            parameters=copy.deepcopy(self.parameters)
+                            )
         return new_atom
 
     def print_atom(self):
@@ -289,8 +293,10 @@ class LinearTransformAtom(TransformAtom):
     """
     Atom used to transform sensor input to output
     """
-    def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,id=None,n=5):
-        super(LinearTransformAtom, self).__init__(memory,messages,message_delays,id=id)
+    def __init__(self,memory=None,messages=None,message_delays=None,
+                        parameters=None,id=None,n=5):
+        super(LinearTransformAtom, self).__init__(memory,messages,
+                                                message_delays,id=id)
         self.n  = n #size of matrix
         self.t_matrix = [] #creates nxn matrix (with an extra bias)
         for i in range(0,self.n+1):
@@ -360,10 +366,10 @@ class LinearTransformAtom(TransformAtom):
 
     def duplicate(self):
         new_atom = LinearTransformAtom(memory=self.memory,
-                                messages=[],
-                                message_delays=copy.deepcopy(self.message_delays),
-                                parameters=copy.deepcopy(self.parameters)
-                                )
+                            messages=[],
+                            message_delays=copy.deepcopy(self.message_delays),
+                            parameters=copy.deepcopy(self.parameters)
+                            )
         new_atom.set_t_matrix(copy.deepcopy(self.get_t_matrix()))
         return new_atom
 
@@ -377,8 +383,8 @@ class MotorAtom(Atom):
     """
     The base class for a sensor atom
     """
-    def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,
-                 motors=None,id=None):
+    def __init__(self,memory=None,messages=None,message_delays=None,
+                 parameters=None,motors=None,id=None):
         super(MotorAtom, self).__init__(memory,messages,message_delays,id=id)
         self.motors = motors
         self.parameters = parameters
@@ -404,8 +410,8 @@ class GameAtom(Atom):
     The base class for a sensor atom
     """
     def __init__(self,memory=None,messages=None,message_delays=None,id=None):
-        super(GameAtom, self).__init__(memory=memory,messages=messages,message_delays=message_delays,
-            id=id)
+        super(GameAtom, self).__init__(memory=memory,messages=messages,
+            message_delays=message_delays,id=id)
         self.type = "game"
         self.state = []
 
@@ -428,8 +434,12 @@ class NaoSensorAtom(SensorAtom):
                  sensors=None,sensory_conditions=None,
                  parameters=None,nao_memory=None,id=None):
         super(NaoSensorAtom, self).__init__(
-                                    memory=memory,messages=messages,message_delays=message_delays,
-                                    sensors=sensors,sensory_conditions=sensory_conditions,parameters=parameters,id=id
+                                    memory=memory,
+                                    messages=messages,
+                                    message_delays=message_delays,
+                                    sensors=sensors,
+                                    sensory_conditions=sensory_conditions,
+                                    parameters=parameters,id=id
                                     )
         self.nao_memory = nao_memory
     def get_sensor_input(self):
@@ -438,14 +448,15 @@ class NaoSensorAtom(SensorAtom):
             self.sensor_input.append(self.nao_memory.getSensorValue(s))
 
     def duplicate(self):
-        new_atom = NaoSensorAtom(memory=self.memory,
-                                messages=[],
-                                message_delays=copy.deepcopy(self.message_delays),
-                                sensors=copy.deepcopy(self.sensors),
-                                sensory_conditions=copy.deepcopy(self.sensory_conditions),
-                                nao_memory=self.nao_memory,
-                                parameters=copy.deepcopy(self.parameters)
-                                )
+        new_atom = NaoSensorAtom(
+                    memory=self.memory,
+                    messages=[],
+                    message_delays=copy.deepcopy(self.message_delays),
+                    sensors=copy.deepcopy(self.sensors),
+                    sensory_conditions=copy.deepcopy(self.sensory_conditions),
+                    nao_memory=self.nao_memory,
+                    parameters=copy.deepcopy(self.parameters)
+                    )
         return new_atom
 
     def get_unique_rand_sensor(self):
@@ -475,12 +486,18 @@ class NaoMotorAtom(MotorAtom):
     """
     The base class for a Nao specific sensor atom
     """
-    def __init__(self,memory=None,messages=None,message_delays=None,parameters=None,
-                 motors=None,nao_motion=None,nao_memory=None,use_input=False,id=None):
+    def __init__(self,memory=None,
+                messages=None,message_delays=None,
+                parameters=None,motors=None,
+                nao_motion=None,nao_memory=None,
+                use_input=False,id=None):
         super(NaoMotorAtom, self).__init__(
-                                    memory=memory,messages=messages,
-                                    message_delays=message_delays,parameters=parameters,
-                                    motors=motors,id=id
+                                    memory=memory,
+                                    messages=messages,
+                                    message_delays=message_delays,
+                                    parameters=parameters,
+                                    motors=motors,
+                                    id=id
                                     )
         self.nao_memory = nao_memory
         self.nao_motion = nao_motion
@@ -563,20 +580,24 @@ class NaoMotorAtom(MotorAtom):
         output += "type: {0}\n".format(self.type)
         output += "time_active: {0}\n".format(self.parameters["time_active"])
         output += "motors: {0}\n".format(self.motors)
-        output += "motor_angles: {0}\n".format(self.parameters["motor_parameters"])
+        output += "motor_angles: {0}\n".format(
+                                        self.parameters["motor_parameters"]
+                                        )
         output += "messages: {0}\n".format(self.messages)
         output += "message_delays: {0}\n".format(self.message_delays)
         return output
 
     def duplicate(self):
-        new_atom = NaoMotorAtom(memory=self.memory,messages=[],
-                                message_delays=copy.deepcopy(self.message_delays),
-                                parameters = copy.deepcopy(self.parameters),
-                                motors=copy.deepcopy(self.motors),
-                                nao_motion=self.nao_motion,
-                                nao_memory=self.nao_memory,
-                                use_input= copy.deepcopy(self.use_input)
-                                )
+        new_atom = NaoMotorAtom(
+                            memory=self.memory,
+                            messages=[],
+                            message_delays=copy.deepcopy(self.message_delays),
+                            parameters = copy.deepcopy(self.parameters),
+                            motors=copy.deepcopy(self.motors),
+                            nao_motion=self.nao_motion,
+                            nao_memory=self.nao_memory,
+                            use_input= copy.deepcopy(self.use_input)
+                            )
         return new_atom
 
     def to_json(self):
@@ -607,4 +628,11 @@ class NaoMaxSensorGame(GameAtom):
                 for data in record:
                     fitness += data
         return fitness
-        
+
+    def duplicate(self):
+        new_atom = NaoMaxSensorGame(
+                            memory=self.memory,
+                            messages=[],
+                            message_delays=copy.deepcopy(self.message_delays)
+                            )
+        return new_atom

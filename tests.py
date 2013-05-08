@@ -257,7 +257,7 @@ sleep(1)
 population[best].activate()
 gm.activate()
 for t in range(0,config.time_steps_per_evaluation):
-    print "sensor:{0}".format(nao_mem_global.getSensorValue(143))
+    print "sensor:{0}".format(nao_mem_global.getSensorValue(141))
     population[best].act()
     population[best].conditional_activate()
     gm.act()

@@ -336,19 +336,21 @@ class GameMolecule(Molecule):
 
     def get_fitness(self):
         fitness = -999999
-        for game in self.game_atoms:
-            fitness = self.get_atom(game).get_fitness()
+        for game in [a for a in self.get_atoms_as_list()
+                        if a.type =="game"]:
+            fitness = game.get_fitness()
         return fitness
 
     def get_state_history(self):
-        for game in self.game_atoms:
-            state = self.get_atom(game).state
+        for game in [a for a in self.get_atoms_as_list()
+                        if a.type =="game"]:
+            state = game.state
         return state
 
     def deactivate(self):
         Molecule.deactivate(self)
-        for game in self.game_atoms:
-            game = self.get_atom(game)
+        for game in [a for a in self.get_atoms_as_list()
+                        if a.type =="game"]:
             if game is not None:
                 game.state = []
 
@@ -479,10 +481,12 @@ class NaoMaxSensorGameMolecule(GameMolecule):
 
     def mutate(self):
         # intra atomic mutations
+        print "mutating"
         for atom in self.get_atoms_as_list():
             if atom.type in ["sensory"]:
                 atom.mutate()
-            if atom.type == ["transform"]:
+            if atom.type == "transform":
+                print "mutating transform"
                 atom.mutate(large=True)
         if random.random() < config.mutation_rate:
             self.create_and_add_atom()
@@ -744,4 +748,8 @@ class NAOActorMolecule(ActorMolecule):
                 new_graph.add_edge(graph_dict[p]["child"],node)
         new_molecule.molecular_graph=new_graph
         new_molecule.set_connections()
+        new_molecule.game_atoms = []
+        # for g in new_molecule.get_atoms_as_list():
+        #     if g.type == "game":
+        #         new_molecule.game_atoms.append(g)
         return new_molecule

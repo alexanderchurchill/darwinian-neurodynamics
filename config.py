@@ -30,3 +30,9 @@ min_sensors_in_s_atom = 1
 max_sensors_in_s_atom = 3
 min_motors_in_m_atom = 1
 max_motors_in_m_atom = 4
+
+#####################
+# Robot parameters
+#####################
+
+robot_port = 9560

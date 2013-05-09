@@ -32,9 +32,11 @@ class Messages(object):
         self.message_list = {}
         self.molecules = {}
         self.atoms = {}
+        self.archive = []
+        self.games_results =[]
         self.atom_count = 0
         self.molecule_count = 0
-        self.archive = []
+
     @_all_strings
     def add_key_to_memory(self,id):
         self.message_list[id]={}
@@ -113,3 +115,6 @@ class Messages(object):
         self.add_molecule(game_copy)
         gap = GameActorPair(game_copy,actor_copy,fitness)
         self.archive.append(gap)
+
+    def add_games_result(self,games_result):
+        self.games_results.append(games_result)

@@ -19,7 +19,7 @@ from naoqi import *
 broker=ALBroker("localbroker","0.0.0.0",   # listen to anyone
        0,           # find a free port and use it
        "127.0.0.1",         # parent broker IP
-       9560)
+       config.robot_port)
 
 fitnessHistory = []
 def flatten(x):

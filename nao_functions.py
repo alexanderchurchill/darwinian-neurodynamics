@@ -3,6 +3,7 @@ import math
 import almath
 from time import time, sleep
 import random
+import config
 class NaoMotorFunction(ALModule):
   """
   Create a basic motor function instance
@@ -11,7 +12,7 @@ class NaoMotorFunction(ALModule):
   def __init__(self,name,ip="ctf.local"):
     ALModule.__init__(self,name)
     self.isRunning=True
-    self.motion = ALProxy("ALMotion", ip, 9560)
+    self.motion = ALProxy("ALMotion", ip, config.robot_port)
     self.Body = self.motion.getLimits("Body")
     self.set_stiffness(1.0)
 

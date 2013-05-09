@@ -148,7 +148,7 @@ class Atom(object):
         return inp
 
     def mutate_delays(self,mutation_rate):
-        if random.random() < mutation_rate:
+        if random.random() < mutation_rate and self.parameters["time_active"] != "always":
             self.parameters["time_active"] += random.randint(-2,2)
         if self.parameters["time_active"] < 1:
             self.parameters["time_active"] = 1
@@ -370,6 +370,7 @@ class LinearTransformAtom(TransformAtom):
     def mutate(self,large=False):
         self.mutate_delays(config.mutation_rate)
         if large is False:
+            print "mutating t_matrix"
             self.mutate_t_matrix(config.mutation_rate)
         else:
             self.large_mutate_t_matrix(config.mutation_rate)
@@ -405,6 +406,16 @@ class LinearTransformAtom(TransformAtom):
         TransformAtom.to_json(self)
         for variable in ["t_matrix"]:
             self.json[variable] = self.__getattribute__(variable)
+    def print_atom(self):
+        output=""
+        output += "id: {0}\n".format(self.get_id())
+        output += "type: {0}\n".format(self.type)
+        output += "messages: {0}\n".format(self.messages)
+        output += "message_delays: {0}\n".format(self.message_delays)
+        output += "parameters: {0}\n".format(self.parameters)
+        output += "n: {0}\n".format(self.n)
+        output += "t_matrix: {0}\n".format(self.t_matrix)
+        return output
 
 
 class MotorAtom(Atom):
@@ -651,7 +662,7 @@ class NaoMaxSensorGame(GameAtom):
         This is currently performing a sum
         """
         fitness = 0
-        print "state:",self.state
+        # print "state:",self.state
         # for time_step in self.state:
         #     for record in time_step:
         #         for data in record:
@@ -668,3 +679,11 @@ class NaoMaxSensorGame(GameAtom):
                             message_delays=copy.deepcopy(self.message_delays)
                             )
         return new_atom
+
+    def print_atom(self):
+        output=""
+        output += "id: {0}\n".format(self.get_id())
+        output += "type: {0}\n".format(self.type)
+        output += "messages: {0}\n".format(self.messages)
+        output += "message_delays: {0}\n".format(self.message_delays)
+        return output

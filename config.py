@@ -6,9 +6,9 @@ are stored in here
 #####################
 # GA parameters
 #####################
-pop_size = 2
+pop_size = 10
 mutation_rate = 0.05
-crossover_rate = 0.95
+crossover_rate = 0.05
 
 #####################
 # Simulation parameters

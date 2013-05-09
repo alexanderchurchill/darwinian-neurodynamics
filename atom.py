@@ -135,6 +135,18 @@ class Atom(object):
         # if any_parent_active == False:
         #     self.time_delayed = 0
 
+    def get_input(self):
+        """
+        Reads the output messages sent by the atoms
+        connected to this one
+        """
+        inp = []
+        for m in sorted(self.messages):
+            in_message = self.memory.get_message(m,'output')
+            if in_message is not None:
+                inp += in_message
+        return inp
+
     def mutate_delays(self,mutation_rate):
         if random.random() < mutation_rate:
             self.parameters["time_active"] += random.randint(-2,2)
@@ -342,9 +354,25 @@ class LinearTransformAtom(TransformAtom):
                         self.t_matrix[m][n] = 1
                     elif self.t_matrix[m][n] < -1:
                         self.t_matrix[m][n] = -1
-    def mutate(self):
+
+    def large_mutate_t_matrix(self,mutation_rate):
+        for m,row in enumerate(self.t_matrix):
+            for n,cell in enumerate(row):
+                if random.random() < mutation_rate:
+                    self.t_matrix[m][n]=random.gauss(0,0.3)
+                else:
+                    self.t_matrix[m][n]+=random.gauss(0,0.1)
+                if self.t_matrix[m][n] > 1:
+                    self.t_matrix[m][n] = 1
+                elif self.t_matrix[m][n] < -1:
+                    self.t_matrix[m][n] = -1
+
+    def mutate(self,large=False):
         self.mutate_delays(config.mutation_rate)
-        self.mutate_t_matrix(config.mutation_rate)
+        if large is False:
+            self.mutate_t_matrix(config.mutation_rate)
+        else:
+            self.large_mutate_t_matrix(config.mutation_rate)
 
     def get_output(self,input,len_output):
         """
@@ -613,20 +641,24 @@ class NaoMaxSensorGame(GameAtom):
             )
 
     def act(self):
-        inp = []
-        output = []
-        for m in self.messages:
-            inp.append(self.memory.get_message(m,'output'))
+        inp = self.get_input()
         # print "game_inp:",inp
         self.state.append(inp)
         # print "game_state:",self.state
 
     def get_fitness(self):
+        """
+        This is currently performing a sum
+        """
         fitness = 0
+        print "state:",self.state
+        # for time_step in self.state:
+        #     for record in time_step:
+        #         for data in record:
+        #             fitness += data
         for time_step in self.state:
             for record in time_step:
-                for data in record:
-                    fitness += data
+                fitness += record
         return fitness
 
     def duplicate(self):

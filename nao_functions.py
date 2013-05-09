@@ -11,7 +11,7 @@ class NaoMotorFunction(ALModule):
   def __init__(self,name,ip="ctf.local"):
     ALModule.__init__(self,name)
     self.isRunning=True
-    self.motion = ALProxy("ALMotion", ip, 9559)
+    self.motion = ALProxy("ALMotion", ip, 9560)
     self.Body = self.motion.getLimits("Body")
     self.set_stiffness(1.0)
 

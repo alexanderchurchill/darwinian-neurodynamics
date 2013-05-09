@@ -19,7 +19,7 @@ from naoqi import *
 broker=ALBroker("localbroker","0.0.0.0",   # listen to anyone
        0,           # find a free port and use it
        "127.0.0.1",         # parent broker IP
-       9559)
+       9560)
 
 class WeightedRandomizer:
     def __init__ (self, weights):
@@ -39,6 +39,27 @@ class WeightedRandomizer:
 
     def get_max(self):
         return self.__max
+
+class GameResults(object):
+    def __init__(self,game):
+        self.game = game
+        self.fitness_history = []
+        
+    def add_fitness(self,population):
+        fitnesses = []
+        for p in population:
+            fitnesses.append(p.fitness)
+        self.fitness_history.append(fitnesses)
+
+    def get_game_fitness(self):
+        starting_fitness = numpy.median(fitness_history[0])
+        ending_fitness = numpy.median(fitness_history[-1])
+        medians = []
+        for f in fitness_history:
+            medians.append(numpy.median(f))
+        overall_median = numpy.median(medians)
+        if overall_median == 0: overall_median = 0.01
+        return (ending_fitness - starting_fitness) / overall_median
 
 def flatten(x):
     result = []
@@ -182,15 +203,15 @@ atoms = memory.atoms
 global bmf_global
 bmf_global = NaoMotorFunction("bmf","127.0.0.1")
 bmf_global.rest()
-max_143 = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global,sensors=[143])
-max_142 = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global,sensors=[142])
+game_1 = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global,sensors=[143])
+game_2 = NaoMaxSensorGameMolecule(memory,atoms,nao_mem_global,sensors=[142])
 games = []
 best_game_scores = []
 all_games_history = []
 
-for g in [max_142,max_143]:
-    games.append(g)
+for g in [game_1,game_2]:
     memory.add_molecule(g)
+    games.append(GameResults(g))
     all_games_history.append([])
     best_game_scores.append(-99999.0)
 m = memory.message_list
@@ -218,7 +239,7 @@ for game_no,island in enumerate(islands):
     print "fitness = ",population[best].fitness
     # memory.add_best_game_act_pair(games[game_no],population[best],fitness=population[best].fitness)
 
-for g in range(0,config.pop_size*10):
+for g in range(0,config.pop_size*20):
     print "iteration:",g
     for game_no,island in enumerate(islands):
         population = island
@@ -265,31 +286,6 @@ for g in range(0,config.pop_size*10):
             print "fitnesses:"
             for p in population:
                 print p.fitness
-    if g > 0 and g%(config.pop_size*2) == 0:
-        for game_no,island in enumerate(islands):
-            for indiv in island:
-                assess_fitness(indiv,games[game_no])
-        for game_no,island in enumerate(islands):
-            best = 0
-            print "fitnesses game {0}:".format(game_no)
-            for i,bm in enumerate(island):
-                print "{0}: {1}".format(i,bm.fitness)
-                if bm.fitness > island[best].fitness:
-                    best = i
-            print "best = ",best
-            print "fitness = ",island[best].fitness
-            memory.add_best_game_act_pair(games[game_no],island[best],fitness=island[best].fitness)
-            if island[best].fitness > best_game_scores[game_no]:
-                best_game_scores[game_no] = island[best].fitness
-        crossover_weights_table = {}
-        for i,b in enumerate(memory.archive):
-            normaliser = best_game_scores[i%2]
-            if normaliser == 0 : normaliser = 0.01
-            crossover_weights_table[i]=b.fitness/best_game_scores[i%2]
-            crossover_get_weights = WeightedRandomizer(crossover_weights_table)
-
-
-
 for game_no,island in enumerate(islands):
     for indiv in island:
         assess_fitness(indiv,games[game_no])
@@ -298,7 +294,31 @@ for game_no,island in enumerate(islands):
     print "fitnesses game {0}:".format(game_no)
     for i,bm in enumerate(island):
         print "{0}: {1}".format(i,bm.fitness)
-        if bm.fitness > population[best].fitness:
+        if bm.fitness > island[best].fitness:
             best = i
     print "best = ",best
-    print "fitness = ",population[best].fitness
+    print "fitness = ",island[best].fitness
+    memory.add_best_game_act_pair(games[game_no],island[best],fitness=island[best].fitness)
+    if island[best].fitness > best_game_scores[game_no]:
+        best_game_scores[game_no] = island[best].fitness
+# crossover_weights_table = {}
+# for i,b in enumerate(memory.archive):
+#     normaliser = best_game_scores[i%2]
+#     if normaliser == 0 : normaliser = 0.01
+#     crossover_weights_table[i]=b.fitness/best_game_scores[i%2]
+#     crossover_get_weights = WeightedRandomizer(crossover_weights_table)
+
+
+
+# for game_no,island in enumerate(islands):
+#     for indiv in island:
+#         assess_fitness(indiv,games[game_no])
+# for game_no,island in enumerate(islands):
+#     best = 0
+#     print "fitnesses game {0}:".format(game_no)
+#     for i,bm in enumerate(island):
+#         print "{0}: {1}".format(i,bm.fitness)
+#         if bm.fitness > population[best].fitness:
+#             best = i
+#     print "best = ",best
+#     print "fitness = ",population[best].fitness

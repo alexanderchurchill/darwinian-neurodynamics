@@ -12,7 +12,8 @@ import config
 graph_colours = {
         "motor":"red",
         "sensory":"blue",
-        "transform":"green"
+        "transform":"green",
+        "game":"purple"
         }
 
 ######################
@@ -103,8 +104,8 @@ class Molecule(object):
                             ):
         connected_graph_dict = {}
         original_graph_dict = {}
-        # duplicate graph with new atoms
-        for node in connected_component:
+        # duplicate graph with new atoms. Note: sorted used to keep id ordering
+        for node in sorted(connected_component):
             connected_graph_dict[node]={}
             connected_graph_dict[node]["predecessors"]=parent_graph.predecessors(node)
             new_atom = self.get_atom(node).duplicate()
@@ -231,7 +232,15 @@ class Molecule(object):
     def remove_random_atom(self):
         if len(self.molecular_graph.nodes()) > 1:
             for atom in self.molecular_graph.nodes():
-                if random.random() < config.mutation_rate:
+                if random.random() < config.mutation_rate and len(self.molecular_graph.nodes()) > 1:
+                    self.remove_atom(atom)
+
+    def remove_random_atom_of_types(self,types):
+        if len(self.find_atoms_of_types(self.molecular_graph,types)) > 1:
+            for atom in self.find_atoms_of_types(self.molecular_graph,types):
+                if (
+                random.random() < config.mutation_rate
+                and len(self.find_atoms_of_types(self.molecular_graph,types)) > 1):
                     self.remove_atom(atom)
 
     def find_atoms_of_types(self,graph,types):
@@ -407,17 +416,9 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             self.set_connections()
 
     def constructor(self):
-        atom_1 = NaoSensorAtom(
-            memory=self.memory,
-            nao_memory=self.nao_memory,
-            sensors=self.sensors,
-            sensory_conditions=[-10.0],
-            messages=[],
-            message_delays=[0],
-            parameters = {
-            "time_active":"always",
-            })
-        atom_2 = TransformAtom(
+        atom_1 = self.create_random_sensor_atom(add=False)
+
+        atom_2 = LinearTransformAtom(
             memory=self.memory,
             messages=[],
             message_delays=[1],
@@ -442,6 +443,52 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             ])
         self.game_atoms.append(atom_3.get_id())
 
+    def create_and_add_atom(self):
+        print "adding sensory atom"
+        atom = self.create_random_sensor_atom()
+        for node in self.molecular_graph.nodes():
+            if self.get_atom(node).type == "transform":
+                connecting_atom = node
+                break
+        self.add_atom_to(atom.get_id(),connecting_atom)
+        print "adding to"
+        self.set_connections()
+
+    def get_random_sensors(self,nao_memory,n_sensors):
+        sensors = []
+        for i in range(0,n_sensors):
+            sensor = nao_memory.getRandomSensor()
+            while sensor in sensors:
+                sensor = nao_memory.getRandomSensor()
+            sensors.append(sensor)
+        return sensors
+
+    def create_random_sensor_atom(self,add=True):
+        no_sensors = 1
+        atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
+            sensors=self.get_random_sensors(self.nao_memory,no_sensors),
+            sensory_conditions=[-10000.0 for s in range(0,no_sensors)],
+            messages=[],
+            message_delays=[self.get_random_message_delays()],
+            parameters={
+            "time_active":self.get_random_time_active()
+            })
+        if add:
+            self.memory.add_atom(atom)
+        return atom
+
+    def mutate(self):
+        # intra atomic mutations
+        for atom in self.get_atoms_as_list():
+            if atom.type in ["sensory"]:
+                atom.mutate()
+            if atom.type == ["transform"]:
+                atom.mutate(large=True)
+        if random.random() < config.mutation_rate:
+            self.create_and_add_atom()
+        self.remove_random_atom_of_types("sensory")
+        self.set_connections()
+
     def duplicate(self):
         new_molecule = NaoMaxSensorGameMolecule(memory=self.memory,
                                         atoms=self.atoms,
@@ -451,8 +498,8 @@ class NaoMaxSensorGameMolecule(GameMolecule):
         graph_dict = {}
         new_graph_dict = {}
         new_graph = nx.DiGraph()
-        # duplicate graph with new atoms
-        for node in self.molecular_graph.nodes():
+        # duplicate graph with new atoms. Note: sorted used to keep id ordering
+        for node in sorted(self.molecular_graph.nodes()):
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
             # print "duplicating:"
@@ -678,8 +725,8 @@ class NAOActorMolecule(ActorMolecule):
         graph_dict = {}
         new_graph_dict = {}
         new_graph = nx.DiGraph()
-        # duplicate graph with new atoms
-        for node in self.molecular_graph.nodes():
+        # duplicate graph with new atoms. Note: sorted used to keep id ordering
+        for node in sorted(self.molecular_graph.nodes()):
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
             # print "duplicating:"

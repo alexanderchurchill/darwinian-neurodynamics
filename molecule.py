@@ -104,7 +104,7 @@ class Molecule(object):
         connected_graph_dict = {}
         original_graph_dict = {}
         # duplicate graph with new atoms
-        for node in connected_component:
+        for node in sorted(connected_component):
             connected_graph_dict[node]={}
             connected_graph_dict[node]["predecessors"]=parent_graph.predecessors(node)
             new_atom = self.get_atom(node).duplicate()
@@ -452,7 +452,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
         new_graph_dict = {}
         new_graph = nx.DiGraph()
         # duplicate graph with new atoms
-        for node in self.molecular_graph.nodes():
+        for node in sorted(self.molecular_graph.nodes()):
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
             # print "duplicating:"
@@ -679,7 +679,7 @@ class NAOActorMolecule(ActorMolecule):
         new_graph_dict = {}
         new_graph = nx.DiGraph()
         # duplicate graph with new atoms
-        for node in self.molecular_graph.nodes():
+        for node in sorted(self.molecular_graph.nodes()):
             graph_dict[node]={}
             graph_dict[node]["predecessors"]=self.molecular_graph.predecessors(node)
             # print "duplicating:"

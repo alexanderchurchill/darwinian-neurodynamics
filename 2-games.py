@@ -188,13 +188,13 @@ games = []
 best_game_scores = []
 all_games_history = []
 
-for g in [max_142,max_143]:
+for g in [max_142]:
     games.append(g)
     memory.add_molecule(g)
     all_games_history.append([])
     best_game_scores.append(-99999.0)
 m = memory.message_list
-
+print "best_game_scores:",best_game_scores
 islands = []
 for island in games:
     population = []
@@ -218,7 +218,7 @@ for game_no,island in enumerate(islands):
     print "fitness = ",population[best].fitness
     # memory.add_best_game_act_pair(games[game_no],population[best],fitness=population[best].fitness)
 
-for g in range(0,config.pop_size*10):
+for g in range(0,config.pop_size*200):
     print "iteration:",g
     for game_no,island in enumerate(islands):
         population = island
@@ -265,7 +265,7 @@ for g in range(0,config.pop_size*10):
             print "fitnesses:"
             for p in population:
                 print p.fitness
-    if g > 0 and g%(config.pop_size*2) == 0:
+    if g > 0 and g%(config.pop_size*10) == 0:
         for game_no,island in enumerate(islands):
             for indiv in island:
                 assess_fitness(indiv,games[game_no])
@@ -283,12 +283,12 @@ for g in range(0,config.pop_size*10):
                 best_game_scores[game_no] = island[best].fitness
         crossover_weights_table = {}
         for i,b in enumerate(memory.archive):
-            normaliser = best_game_scores[i%2]
+            normaliser = best_game_scores[i%len(games)]
             if normaliser == 0 : normaliser = 0.01
-            crossover_weights_table[i]=b.fitness/best_game_scores[i%2]
+            crossover_weights_table[i]=b.fitness/normaliser
             crossover_get_weights = WeightedRandomizer(crossover_weights_table)
 
-
+save_archive(memory.archive)
 
 for game_no,island in enumerate(islands):
     for indiv in island:

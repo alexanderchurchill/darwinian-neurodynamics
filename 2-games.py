@@ -63,9 +63,13 @@ class GameResults(object):
         overall_median = numpy.median(medians)
         self.median = overall_median
         if overall_median == 0: overall_median = 0.01
+        leveller = 0
+        if self.starting_fitness < 0:
+            leveller =  (self.starting_fitness*-1)*10
         self.fitness = (
-            (self.ending_fitness - self.starting_fitness)
-            / overall_median
+            ((self.ending_fitness + leveller) - 
+                (self.starting_fitness + leveller))
+            / (overall_median + leveller)
             )
         return self.fitness
 
@@ -74,8 +78,7 @@ class GameResults(object):
         output.append("game: {0}".format(self.game.get_id()))
         output.append("fitness: {0}".format(self.fitness))
         output.append("starting_fitness: {0}".format(self.starting_fitness))
-        output.append("median: {0}".format(self.fitness))
-        output.append("ending_fitness: {0}".format(self.ending_fitness))
+        output.append("median: {0}".format(self.median))
         output.append("ending_fitness: {0}".format(self.ending_fitness))
         output.append("fitness_history: {0}".format(self.fitness_history))
         return "\n".join(output)
@@ -393,6 +396,9 @@ for game_gen in range(0,200):
     else:
         games[0] = GameResults(games[1].game.duplicate())
         games[0].game.mutate()
+    for game_no,island in enumerate(islands):
+        for indiv in island:
+            assess_fitness(indiv,games[game_no].game)
     for index,island in enumerate(islands):
         print "island:",index
         for p in island:

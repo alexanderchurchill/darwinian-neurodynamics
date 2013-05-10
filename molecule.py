@@ -488,7 +488,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
             if atom.type == "transform":
                 print "mutating transform"
                 atom.mutate(large=True)
-        if random.random() < config.mutation_rate:
+        if random.random() < 0.1:
             self.create_and_add_atom()
         self.remove_random_atom_of_types("sensory")
         self.set_connections()
@@ -601,7 +601,7 @@ class NAOActorMolecule(ActorMolecule):
             self.set_connections()
         self.remove_random_atom()
         self.set_connections()
-        if random.random() < 0.01:
+        if random.random() < 0.05:
             self.remove_rand_connected_component()
             self.set_connections()
 

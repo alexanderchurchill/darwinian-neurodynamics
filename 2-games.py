@@ -383,7 +383,7 @@ for game_gen in range(0,200):
         game_fitness = game_result.get_game_fitness()
         memory.add_best_game_act_pair(
             games[game_no].game,island[best],
-            fitness= abs(island[best].fitness/game_result.normaliser)
+            fitness= abs((island[best].fitness-game_result.median)/game_result.normaliser)
                 )
         memory.add_games_result(game_result)
     crossover_weights_table = {}

@@ -227,9 +227,12 @@ class SensorAtom(Atom):
         if conditions_met:
             Atom.activate(self)
 
-    def mutate(self):
+    def mutate(self,mutation_rate=None):
         self.mutate_delays(config.mutation_rate)
-        self.mutate_sensors(config.mutation_rate)
+        if mutation_rate is None:
+            self.mutate_sensors(config.mutation_rate)
+        else:
+            self.mutate_sensors(mutation_rate)
 
     def mutate_sensors(self):
         pass

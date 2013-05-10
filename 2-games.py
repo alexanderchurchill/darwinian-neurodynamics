@@ -48,6 +48,7 @@ class GameResults(object):
         self.ending_fitness = -9999
         self.median = -9999
         self.fitness = -9999
+        self.normaliser = 0
     def add_fitness(self,population):
         fitnesses = []
         for p in population:
@@ -58,19 +59,19 @@ class GameResults(object):
         self.starting_fitness = numpy.median(self.fitness_history[0])
         self.ending_fitness = numpy.median(self.fitness_history[-1])
         medians = []
+        self.max = -9999.0
+        self.min = 9999.0
         for f in self.fitness_history:
             medians.append(numpy.median(f))
-        overall_median = numpy.median(medians)
-        self.median = overall_median
-        if overall_median == 0: overall_median = 0.01
-        leveller = 0
-        if self.starting_fitness < 0:
-            leveller =  (self.starting_fitness*-1)*10
-        self.fitness = (
-            ((self.ending_fitness + leveller) - 
-                (self.starting_fitness + leveller))
-            / (overall_median + leveller)
-            )
+            if max(f) > self.max:
+                self.max = max(f)
+            if min(f) < self.min:
+                self.min = min(f)
+        self.median = numpy.median(medians)
+        self.normaliser = self.max - self.min
+        if self.normaliser == 0:
+            self.normaliser = 1.0
+        self.fitness = (self.ending_fitness - self.starting_fitness)/self.normaliser
         return self.fitness
 
     def output_results(self):
@@ -256,6 +257,17 @@ def load_molecule(json,memory,atoms,nao_memory,nao_motion):
     molecule.set_connections()
     return molecule
 
+def duplicate_population(winning_population,losing_population,probability):
+    new_pop = []
+    for p in range(0,len(winning_population)):
+        if random.random() < probability:
+            new_m = winning_population[p].duplicate()
+        else:
+            new_m = losing_population[p].duplicate()
+        memory.add_molecule(new_m)
+        new_pop.append(new_m)
+    return new_pop
+
 #Create memory manager to store dictionary of sensory and motor states
 #All use of memory is through use of the memory manager module. 
 global nao_mem_global
@@ -343,17 +355,17 @@ for game_gen in range(0,200):
                 ind_from_archive = memory.archive[crossover_ind_index].actor
                 new_ind.crossover(ind_from_archive)
             new_ind.mutate()
-            if g%config.pop_size == 0:
-                # plt.ion()
-                plot_fitness(population,game_gen,game_no,all_games_history[game_no])
-                plt.show()
-                plt.savefig('graphs/game_gen_{0}_game_{1}/{2}.png'.format(game_gen,game_no,g))
-                plt.close()
-                save_population(g,population,game_gen,game_no)
-                print "fitnesses:"
-                for p in population:
-                    print p.fitness
-                games[game_no].add_fitness(population)
+            # if g%(config.pop_size) == 0:
+            # plt.ion()
+            plot_fitness(population,game_gen,game_no,all_games_history[game_no])
+            plt.show()
+            plt.savefig('graphs/game_gen_{0}_game_{1}/{2}.png'.format(game_gen,game_no,g))
+            plt.close()
+            save_population(g,population,game_gen,game_no)
+            print "fitnesses:"
+            for p in population:
+                print p.fitness
+            games[game_no].add_fitness(population)
     for game_no,island in enumerate(islands):
         for indiv in island:
             assess_fitness(indiv,games[game_no].game)
@@ -369,11 +381,13 @@ for game_gen in range(0,200):
         print "fitness = ",island[best].fitness
         game_result = games[game_no]
         game_fitness = game_result.get_game_fitness()
-        game_median = game_result.median
-        if game_median == 0: game_median = 0.01
         memory.add_best_game_act_pair(
             games[game_no].game,island[best],
-            fitness=island[best].fitness/game_median)
+            fitness=(
+                (island[best].fitness)
+                /(game_result.normaliser)
+                )
+            )
         memory.add_games_result(game_result)
     crossover_weights_table = {}
     for i,b in enumerate(memory.archive):
@@ -392,10 +406,14 @@ for game_gen in range(0,200):
     save_archive(memory.archive)
     if games[0].fitness > games[1].fitness:
         games[1] = GameResults(games[0].game.duplicate())
+        memory.add_molecule(games[1].game)
         games[1].game.mutate()
+        islands[1] = duplicate_population(islands[0],islands[1],0.5)
     else:
         games[0] = GameResults(games[1].game.duplicate())
+        memory.add_molecule(games[0].game)
         games[0].game.mutate()
+        islands[0] = duplicate_population(islands[1],islands[0],0.5)
     for game_no,island in enumerate(islands):
         for indiv in island:
             assess_fitness(indiv,games[game_no].game)

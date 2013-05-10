@@ -239,7 +239,7 @@ class Molecule(object):
         if len(self.find_atoms_of_types(self.molecular_graph,types)) > 1:
             for atom in self.find_atoms_of_types(self.molecular_graph,types):
                 if (
-                random.random() < config.mutation_rate
+                random.random() < 0.1
                 and len(self.find_atoms_of_types(self.molecular_graph,types)) > 1):
                     self.remove_atom(atom)
 
@@ -419,31 +419,34 @@ class NaoMaxSensorGameMolecule(GameMolecule):
 
     def constructor(self):
         atom_1 = self.create_random_sensor_atom(add=False)
+        atom_2 = self.create_random_sensor_atom(add=False)
 
-        atom_2 = LinearTransformAtom(
+        atom_3 = LinearTransformAtom(
             memory=self.memory,
             messages=[],
             message_delays=[1],
             parameters = {
             "time_active":"always",
             })
-        atom_3 = NaoMaxSensorGame(
+        atom_4 = NaoMaxSensorGame(
             memory=self.memory,
             messages=[],
             message_delays=[1]
             )
         # add atom to shared list of atoms
-        for a in [atom_1,atom_2,atom_3]:
+        for a in [atom_1,atom_2,atom_3,atom_4]:
             self.memory.add_atom(a)
         self.molecular_graph = nx.DiGraph()
         self.molecular_graph.add_node(atom_1.get_id())
         self.molecular_graph.add_node(atom_2.get_id())
         self.molecular_graph.add_node(atom_3.get_id())
+        self.molecular_graph.add_node(atom_4.get_id())
         self.molecular_graph.add_edges_from([
-            (atom_1.get_id(),atom_2.get_id()),
-            (atom_2.get_id(),atom_3.get_id())
+            (atom_1.get_id(),atom_3.get_id()),
+            (atom_2.get_id(),atom_3.get_id()),
+            (atom_3.get_id(),atom_4.get_id())
             ])
-        self.game_atoms.append(atom_3.get_id())
+        self.game_atoms.append(atom_4.get_id())
 
     def create_and_add_atom(self):
         print "adding sensory atom"
@@ -466,7 +469,7 @@ class NaoMaxSensorGameMolecule(GameMolecule):
         return sensors
 
     def create_random_sensor_atom(self,add=True):
-        no_sensors = 1
+        no_sensors = random.randint(1,3)
         atom = NaoSensorAtom(memory=self.memory,nao_memory=self.nao_memory,
             sensors=self.get_random_sensors(self.nao_memory,no_sensors),
             sensory_conditions=[-10000.0 for s in range(0,no_sensors)],
@@ -484,11 +487,11 @@ class NaoMaxSensorGameMolecule(GameMolecule):
         print "mutating"
         for atom in self.get_atoms_as_list():
             if atom.type in ["sensory"]:
-                atom.mutate()
+                atom.mutate(0.25)
             if atom.type == "transform":
                 print "mutating transform"
                 atom.mutate(large=True)
-        if random.random() < 0.1:
+        if random.random() < 0.25:
             self.create_and_add_atom()
         self.remove_random_atom_of_types("sensory")
         self.set_connections()
